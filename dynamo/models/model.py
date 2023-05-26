@@ -11,6 +11,8 @@ class IBaseModel(Protocol):
 
 class IModelWithId(IBaseModel, Protocol):
     node_id: str
+    x: float
+    y: float
     group: Optional['IGroup']
 
 
@@ -28,9 +30,13 @@ class IModelWithNodes(Protocol[TNode]):
         ...
 
 
-class IGroup(IBaseModel, IModelWithNodes[IModelWithId],  Protocol):
-    node_id: str
+@runtime_checkable
+class IAnnotation(IModelWithId, Protocol):
     description: str
+
+
+@runtime_checkable
+class IGroup(IAnnotation, IModelWithNodes[IModelWithId],  Protocol):
     color: str
 
 
@@ -44,11 +50,6 @@ class IPackage(IBaseModel, Protocol):
     @ property
     def full_name(self) -> str:
         ...
-
-
-class IAnnotation(IModelWithId, Protocol):
-    name: str
-    description: str
 
 
 class INode(IModelWithId, Protocol):

@@ -47,7 +47,7 @@ class ADocFile(IDocsFile):
 
     def existing_docs(self) -> List[str]:
         if self._existing_docs is None:
-            handler = self.manager.exporter.handler
+            handler = self.manager.exporter.file_handler
             self._existing_docs = []
             if handler.can_read(self.doc_path):
                 self._existing_docs = handler.read(self.doc_path)
@@ -65,7 +65,7 @@ class AModelDocFile(ADocFile, IModelDocs[TModel]):
         return self.model.path
 
     def write(self, lines: List[str]):
-        handler = self.manager.exporter.handler
+        handler = self.manager.exporter.file_handler
         paths.create_directory_unless_exist(self.doc_path)
         handler.write(self.doc_path, lines)
 

@@ -1,11 +1,11 @@
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, Iterable, Optional, Tuple, Type, TypeVar
 
-from dynamo.models.files import DynamoInfo, PackageInfo, TNode
+from dynamo.models.files import DynamoInfo, PackageInfo
 from dynamo.models.model import IDependency
-from dynamo.models.nodes import (ANode, ABaseModel, Annotation, CodeBlockNode,
+from dynamo.models.nodes import (ABaseModel, Annotation, CodeBlockNode,
                                  CustomNetNode, CustomPythonNode, DirInputNode,
-                                 ExternalDependency, FileInputNode, Group,
-                                 PackageDependency, PythonCodeNode)
+                                 DynamoNode, ExternalDependency, FileInputNode, GeneralNode,
+                                 Group, PackageDependency, PythonCodeNode)
 from dynamo.source.gateway import IBuilder
 
 TModel = TypeVar('TModel', bound=ABaseModel | Annotation | DynamoInfo | PackageInfo)
@@ -46,6 +46,15 @@ class NodeBuilder(IBuilder[TModel, Dict[str, Any]]):
         return self.node_type(**attributes)
 
 
+class GeneralNodeBuilder(NodeBuilder[GeneralNode]):
+
+    def __init__(self, attr_map: Dict[str, Tuple[str, Any]]) -> None:
+        super().__init__(GeneralNode, attr_map, {})
+
+    def can_build(self, content: Dict[str, Any], **kwargs) -> bool:
+        return len(content) > 0 and True
+
+
 def _node_attr_src_map() -> Dict[str, Tuple[str, Any]]:
     attr_map: Dict[str, Tuple[str, Any]] = {
         'node_id': ('Id', None),
@@ -53,7 +62,9 @@ def _node_attr_src_map() -> Dict[str, Tuple[str, Any]]:
         # 'replication': ('Disabled', None),
         'name': ('Name', None),
         'disabled': ('Excluded', None),
-        'show_geometry': ('ShowGeometry', None)
+        'show_geometry': ('ShowGeometry', None),
+        'x': ('X', None),
+        'y': ('Y', None)
     }
     return attr_map
 
@@ -138,6 +149,11 @@ def dir_node_builder() -> NodeBuilder:
     return NodeBuilder(DirInputNode, attr_map, build_values)
 
 
+def general_node_builder() -> NodeBuilder:
+    attr_map = _node_attr_src_map()
+    return GeneralNodeBuilder(attr_map)
+
+
 def node_builders() -> Iterable[NodeBuilder]:
     return [
         custom_python_builder(),
@@ -146,10 +162,11 @@ def node_builders() -> Iterable[NodeBuilder]:
         python_node_builder(),
         file_node_builder(),
         dir_node_builder(),
+        general_node_builder(),
     ]
 
 
-class DynamoNodeBuilder(IBuilder[ANode, Dict[str, Any]]):
+class DynamoNodeBuilder(IBuilder[DynamoNode, Dict[str, Any]]):
 
     def __init__(self, builders: Optional[Iterable[NodeBuilder]] = None) -> None:
         super().__init__()
@@ -165,7 +182,7 @@ class DynamoNodeBuilder(IBuilder[ANode, Dict[str, Any]]):
     def can_build(self, content: Dict[str, Any], **kwargs) -> bool:
         return self._build_by(content, **kwargs) is not None
 
-    def build(self, content: Dict[str, Any], **kwargs) -> Optional[ANode]:
+    def build(self, content: Dict[str, Any], **kwargs) -> Optional[DynamoNode]:
         builder = self._build_by(content, **kwargs)
         return None if builder is None else builder.build(content, **kwargs)
 
@@ -210,7 +227,7 @@ class DependencyBuilder(IBuilder[IDependency, Dict[str, Any]]):
     def can_build(self, content: Dict[str, Any], **kwargs) -> bool:
         return self._build_by(content, **kwargs) is not None
 
-    def build(self, content: Dict[str, Any], **kwargs) -> Optional[ANode]:
+    def build(self, content: Dict[str, Any], **kwargs) -> Optional[DynamoNode]:
         builder = self._build_by(content, **kwargs)
         return None if builder is None else builder.build(content, **kwargs)
 
@@ -231,6 +248,8 @@ def group_node_builder() -> NodeBuilder:
         'description': ('DescriptionText', None),
         'node_ids': ('Nodes', []),
         'color': ('Background', None),
+        'x': ('Left', None),
+        'y': ('Top', None),
     }
 
     return NodeBuilder(Group, attr_map)
@@ -238,26 +257,26 @@ def group_node_builder() -> NodeBuilder:
 
 def dynamo_info_builder() -> NodeBuilder:
     attr_map = {
-        'scale_factor': ('ScaleFactor', ANode),
-        'has_run_without_crash': ('HasRunWithoutCrash', ANode),
-        'is_visible_in_library': ('IsVisibleInDynamoLibrary', ANode),
-        'version': ('Version', ANode),
-        'run_type': ('Manual', ANode),
+        'scale_factor': ('ScaleFactor', DynamoNode),
+        'has_run_without_crash': ('HasRunWithoutCrash', DynamoNode),
+        'is_visible_in_library': ('IsVisibleInDynamoLibrary', DynamoNode),
+        'version': ('Version', DynamoNode),
+        'run_type': ('Manual', DynamoNode),
     }
     return NodeBuilder(DynamoInfo, attr_map)
 
 
 def package_info_builder() -> NodeBuilder:
     attr_map = {
-        'version': ('version', ANode),
-        'license': ('license', ANode),
-        'group': ('group', ANode),
-        'keywords': ('keywords', ANode),
-        'dependencies': ('dependencies', ANode),
-        'contents': ('contents', ANode),
-        'engine_version': ('engine_version', ANode),
-        'site_url': ('site_url', ANode),
-        'repository_url': ('repository_url', ANode),
+        'version': ('version', DynamoNode),
+        'license': ('license', DynamoNode),
+        'group': ('group', DynamoNode),
+        'keywords': ('keywords', DynamoNode),
+        'dependencies': ('dependencies', DynamoNode),
+        'contents': ('contents', DynamoNode),
+        'engine_version': ('engine_version', DynamoNode),
+        'site_url': ('site_url', DynamoNode),
+        'repository_url': ('repository_url', DynamoNode),
     }
     return NodeBuilder(PackageInfo, attr_map)
 

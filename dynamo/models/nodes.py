@@ -16,11 +16,12 @@ class ABaseModel(IBaseModel):
 @dataclass
 class ABaseNode(ABaseModel):
     node_id: str = field(repr=False, compare=True)
+    x: float = field(compare=False, repr=False)
+    y: float = field(compare=False, repr=False)
 
 
 @dataclass
-class Annotation(IAnnotation):
-    node_id: str = field(repr=False, compare=True)
+class Annotation(ABaseNode, IAnnotation):
     description: str = field(repr=True, compare=False)
     name: str = field(default='Annotation', repr=True, compare=False)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)
@@ -32,6 +33,7 @@ class Group(ABaseNode, IGroup):
     description: str = field(compare=False, repr=False)
     node_ids: List[str] = field(compare=False, repr=False)
     _nodes: List[ABaseNode] = field(default_factory=list, compare=False, repr=False)
+    group: Optional[IGroup] = field(default=None, compare=False, repr=False)
 
     @property
     def nodes(self) -> List[ABaseNode]:
@@ -56,24 +58,19 @@ class AInputOutputNode(ABaseModel, IBaseModel):
 
 
 @dataclass
-class InputNode(AInputOutputNode):
-    pass
-
-
-@dataclass
-class OutputNode(AInputOutputNode):
-    pass
-
-
-@dataclass
-class ANode(ABaseNode):
+class DynamoNode(ABaseNode):
     description: str = field(repr=False, compare=False)
     disabled: bool = field(repr=False, compare=False)
     show_geometry: bool = field(repr=False, compare=False)
 
 
 @dataclass
-class APathInputNode(ANode, INode):
+class GeneralNode(DynamoNode):
+    group: Optional[IGroup] = field(default=None, compare=False, repr=False)
+
+
+@dataclass
+class APathInputNode(DynamoNode, INode):
     hint_path: str = field(repr=False, compare=False)
     input_value: str = field(repr=False, compare=False)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)
@@ -94,13 +91,13 @@ class DirInputNode(APathInputNode):
 
 
 @dataclass
-class CodeBlockNode(INode, ANode):
+class CodeBlockNode(INode, DynamoNode):
     code: str = field(repr=False, compare=False)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)
 
 
 @dataclass
-class PythonCodeNode(INode, ANode):
+class PythonCodeNode(INode, DynamoNode):
     code: str = field(repr=False, compare=False)
     engine: str = field(repr=False, compare=False)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)
@@ -111,7 +108,7 @@ def default_package() -> IPackage:
 
 
 @dataclass
-class CustomNode(ICustomNode, INode, ANode):
+class CustomNode(ICustomNode, INode, DynamoNode):
     uuid: str = field(compare=False, repr=True)
     package: IPackage = field(default_factory=default_package, compare=False, repr=True)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)

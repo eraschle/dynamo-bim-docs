@@ -1,18 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, List, OrderedDict, Tuple, Type, TypeVar
 
-from dynamo.models.files import (ADynamoFileNode, AFileBaseModel, Package,
-                                 PythonCustomFileNode, Script)
-from dynamo.models.nodes import ANode
+from dynamo.models.files import (ADynamoFileNode, AFileBaseModel,
+                                 Package, PythonCustomFileNode, Script)
+from dynamo.models.nodes import DynamoNode
 from dynamo.source.gateway import IBuilder, ISourceRepository
-from dynamo.source.json.builder_nodes import (DependencyBuilder, DynamoNodeBuilder, NodeBuilder,
+from dynamo.source.json.builder_nodes import (DependencyBuilder,
+                                              DynamoNodeBuilder,
                                               annotation_node_builder,
                                               dynamo_info_builder,
                                               group_node_builder,
                                               package_info_builder)
 
 TFileModel = TypeVar('TFileModel', bound=AFileBaseModel)
-TBuilder = TypeVar('TBuilder', bound=NodeBuilder)
+TBuilder = TypeVar('TBuilder', bound=IBuilder)
 
 
 class AFileBuilder(ABC, IBuilder[TFileModel, ISourceRepository]):
@@ -50,7 +51,7 @@ TDynamoFile = TypeVar('TDynamoFile', bound=ADynamoFileNode)
 
 class ADynamoFileBuilder(AFileBuilder[TDynamoFile]):
 
-    node_cache: Dict[str, ANode] = {}
+    node_cache: Dict[str, DynamoNode] = {}
 
     @classmethod
     def attr_src_map(cls) -> Dict[str, Tuple[str, Any]]:
@@ -62,7 +63,7 @@ class ADynamoFileBuilder(AFileBuilder[TDynamoFile]):
         return attr_map
 
     @classmethod
-    def builder_map(cls) -> OrderedDict[str, Tuple[str, NodeBuilder]]:
+    def builder_map(cls) -> OrderedDict[str, Tuple[str, IBuilder]]:
         return {
             'info': ('dynamo_info', dynamo_info_builder()),
             'nodes': ('nodes', DynamoNodeBuilder()),
@@ -71,18 +72,18 @@ class ADynamoFileBuilder(AFileBuilder[TDynamoFile]):
             'annotations': ('annotations', annotation_node_builder()),
         }  # type: ignore
 
-    def _get_nodes(self, node_ids: Iterable[str]) -> List[ANode]:
+    def _get_nodes(self, node_ids: Iterable[str]) -> List[DynamoNode]:
         nodes = [self.node_cache.get(node_id, None) for node_id in node_ids]
         return [node for node in nodes if node is not None]
 
-    def _build_nodes(self, repo: ISourceRepository, builder_info: Tuple[str, NodeBuilder], **kwargs) -> List[ANode]:
+    def _build_nodes(self, repo: ISourceRepository, builder_info: Tuple[str, IBuilder], **kwargs) -> List[DynamoNode]:
         nodes = []
         func_name, builder = builder_info
         for node_content in getattr(repo, func_name)():
             if not builder.can_build(node_content, **kwargs):
                 continue
             model = builder.build(node_content, **kwargs)
-            if isinstance(model, ANode):
+            if isinstance(model, DynamoNode):
                 self.node_cache[model.node_id] = model
             nodes.append(model)
         return nodes
@@ -137,7 +138,7 @@ class PackageFileBuilder(AFileBuilder[Package]):
     def __init__(self) -> None:
         super().__init__(Package)
 
-    def _build_nodes(self, repo: ISourceRepository, builder_info: Tuple[str, IBuilder], **kwargs) -> ANode:
+    def _build_nodes(self, repo: ISourceRepository, builder_info: Tuple[str, IBuilder], **kwargs) -> DynamoNode:
         func_name, builder = builder_info
         node_content = getattr(repo, func_name)()
         if not builder.can_build(node_content, **kwargs):

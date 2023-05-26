@@ -2,20 +2,25 @@ from ctypes import ArgumentError
 from typing import List, Tuple
 
 from dynamo.docs import content
-from dynamo.docs.content import (AHeadingContent, AHeadingTextDocs,
-                                 FileDescriptionDocs, IDocContent)
+from dynamo.docs.content import AHeadineDoc, IDocContent
 from dynamo.docs.doc_models import CustomNodeDocFile
 from dynamo.docs.docs import IDocsFile, IModelDocs
 from dynamo.models.files import Package
 
 
-class PackageContentDocs(AHeadingTextDocs[Package]):
+class PackageContentDocs(AHeadineDoc[Package]):
 
     def _heading_content(self, **_) -> List[str]:
-        return self.values.value_or_default(self.model.info.contents, 'Keine Inhalt')
+        return self.value_handler.get_or_default(self.model.info.contents, 'Keine Inhalt')
 
 
-class PackageInformationDocs(AHeadingTextDocs[Package]):
+class PackageDescriptionDocs(AHeadineDoc[Package]):
+
+    def _heading_content(self, **_) -> List[str]:
+        return self.value_handler.get_or_default(self.model.description, 'Keine Beschreibung')
+
+
+class PackageInformationDocs(AHeadineDoc[Package]):
 
     def __init__(self, file: IModelDocs[Package],
                  children: List[IDocContent[Package]],
@@ -25,10 +30,10 @@ class PackageInformationDocs(AHeadingTextDocs[Package]):
 
     def _heading_content(self, **_) -> List[str]:
         lines = [
-            ['Version', *self.values.value_or_default(self.model.info.version)],
-            ['Engine', *self.values.value_or_default(self.model.info.engine_version)],
-            ['Homepage', *self.values.value_or_default(self.model.info.site_url)],
-            ['Repository', *self.values.value_or_default(self.model.info.repository_url)]
+            ['Version', *self.value_handler.get_or_default(self.model.info.version)],
+            ['Engine', *self.value_handler.get_or_default(self.model.info.engine_version)],
+            ['Homepage', *self.value_handler.get_or_default(self.model.info.site_url)],
+            ['Repository', *self.value_handler.get_or_default(self.model.info.repository_url)]
         ]
         return self.exporter.as_table(None, lines)
 
@@ -40,7 +45,7 @@ class PackageInformationDocs(AHeadingTextDocs[Package]):
         return lines
 
 
-class PackageCustomNodeDocs(AHeadingContent[Package]):
+class PackageCustomNodeDocs(AHeadineDoc[Package]):
 
     def _get_category(self, **kwargs) -> str:
         arg = 'category'
@@ -64,7 +69,7 @@ class PackageCustomNodeDocs(AHeadingContent[Package]):
         return lines
 
 
-class PackageNodesDocs(AHeadingTextDocs[Package]):
+class PackageNodesDocs(AHeadineDoc[Package]):
 
     def __init__(self, file: IModelDocs[Package],
                  docs: IDocContent[Package],
@@ -78,7 +83,7 @@ class PackageNodesDocs(AHeadingTextDocs[Package]):
 
     def _heading_content(self, **_) -> List[str]:
         nodes = self._categories()
-        return self.values.default_if_empty(nodes, 'Keine Kategorien')
+        return self.value_handler.default_or_empty(nodes, 'Keine Kategorien')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         lines = super()._children_content(level, **kwargs)
@@ -94,11 +99,11 @@ def packages_content(file: IModelDocs[Package]) -> List[IDocContent[Package]]:
         PackageInformationDocs(
             file=file,
             children=[
-                FileDescriptionDocs(
-                    file=file, heading='Beschreibung'
+                PackageDescriptionDocs(
+                    file=file, headline='Beschreibung'
                 ),
                 PackageContentDocs(
-                    file=file, heading='Inhalt'
+                    file=file, headline='Inhalt'
                 )
             ],
             heading='Informationen'),
