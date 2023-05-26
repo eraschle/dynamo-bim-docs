@@ -54,6 +54,15 @@ class ADocContent(IDocContent[TFile]):
     def values(self) -> ValueHandler:
         return self.exporter.values
 
+    def _strip_empty(self, content: List[str]) -> List[str]:
+        return self.values.strip_empty(content)
+
+    def _lstrip_empty(self, content: List[str]) -> List[str]:
+        return self.values.strip_starting_empty(content)
+
+    def _rstrip_empty(self, content: List[str]) -> List[str]:
+        return self.values.strip_ending_empty(content)
+
     @property
     def model(self) -> TFile:
         return self.file.model
@@ -62,10 +71,10 @@ class ADocContent(IDocContent[TFile]):
         lines = []
         lines.extend(self.exporter.empty_line())
         content = self._content(level, **kwargs)
-        lines.extend(self.values.remove_starting_and_ending_empty_lines(content))
+        lines.extend(self._strip_empty(content))
         lines.extend(self.exporter.empty_line())
         children = self._children_content(level + 1)
-        lines.extend(self.values.remove_starting_and_ending_empty_lines(children))
+        lines.extend(self._strip_empty(children))
         return lines
 
     @abstractmethod
@@ -74,7 +83,7 @@ class ADocContent(IDocContent[TFile]):
 
     def _get_doc_content(self, child: IDocContent[TFile], level: int, **kwargs) -> List[str]:
         content = child.content(level, **kwargs)
-        content = self.values.remove_ending_empty_lines(content)
+        content = self._rstrip_empty(content)
         return content
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
@@ -127,13 +136,13 @@ class AHeadingContent(ADocContent[TFile]):
         pass
 
     def _heading_value(self, lines: List[str]) -> str:
-        heading = self.values.remove_starting_empty_lines(lines)
+        heading = self.values.strip_starting_empty(lines)
         if len(heading) < 1:
             raise ValueError(f'No Heading in {lines}')
         return heading[0]
 
     def _clean_existing_content(self) -> List[str]:
-        lines = self.values.remove_starting_and_ending_empty_lines(self._existing_content[1:])
+        lines = self._strip_empty(self._existing_content[1:])
         lines = self.values.remove_no_manual_docs(lines)
         return lines
 
@@ -150,7 +159,7 @@ class AHeadingContent(ADocContent[TFile]):
 
     def _manual_docs(self) -> List[str]:
         existing = self._clean_existing_content()
-        existing = self.values.remove_starting_and_ending_empty_lines(existing)
+        existing = self._strip_empty(existing)
         return self.values.value_or_default(existing, self.values.no_manual_doc)
 
 

@@ -19,15 +19,3 @@ def is_blank(value: Optional[Union[str, Collection[Any]]], strip: bool = False) 
 
 def is_not_blank(value: Union[str, Collection], strip: bool = False) -> bool:
     return not is_blank(value, strip)
-
-
-def remove_starting_of(lines: List[Any], callback: Callable[[Any], bool]) -> List[Any]:
-    while is_not_blank(lines) and callback(lines[0]):
-        lines = lines[1:]
-    return lines
-
-
-def remove_ending_of(lines: List[Any], callback: Callable[[Any], bool]) -> List[Any]:
-    while is_not_blank(lines) and callback(lines[-1]):
-        lines = lines[:-1]
-    return lines

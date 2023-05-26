@@ -87,18 +87,22 @@ class ValueHandler:
             return [self._get_default(default)]
         return []
 
-    def __is_blank(self, value: Any, strip: bool = True) -> bool:
-        return checks.is_blank(value, strip=strip)
+    def _can_strip(self, values: List[Any], index: int) -> bool:
+        return checks.is_not_blank(values) and checks.is_blank(values[index], strip=True)
 
-    def remove_starting_empty_lines(self, lines: List[str]) -> List[str]:
-        return checks.remove_starting_of(lines, self.__is_blank)
+    def strip_starting_empty(self, lines: List[str]) -> List[str]:
+        while self._can_strip(lines, index=0):
+            lines = lines[1:]
+        return lines
 
-    def remove_ending_empty_lines(self, lines: List[str]) -> List[str]:
-        return checks.remove_ending_of(lines, self.__is_blank)
+    def strip_ending_empty(self, lines: List[str]) -> List[str]:
+        while self._can_strip(lines, index=-1):
+            lines = lines[:-1]
+        return lines
 
-    def remove_starting_and_ending_empty_lines(self, lines: List[str]) -> List[str]:
-        lines = self.remove_starting_empty_lines(lines)
-        return self.remove_ending_empty_lines(lines)
+    def strip_empty(self, lines: List[str]) -> List[str]:
+        lines = self.strip_starting_empty(lines)
+        return self.strip_ending_empty(lines)
 
     def remove_no_manual_docs(self, lines: List[str]) -> List[str]:
         while self.no_manual_doc in lines:

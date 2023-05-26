@@ -33,7 +33,7 @@ class ScriptInputOutputContent(AHeadingTextDocs[Script]):
         index, link, _ = indexes[0]
         if link.endswith(self.file.doc_path.suffix):
             del lines[index]
-        lines = self.values.remove_starting_empty_lines(lines)
+        lines = self.values.strip_starting_empty(lines)
         return lines
 
     def _heading_content(self, **kwargs) -> List[str]:
