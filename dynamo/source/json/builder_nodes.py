@@ -186,7 +186,6 @@ class DynamoNodeBuilder(IBuilder[DynamoNode, Dict[str, Any]]):
         builder = self._build_by(content, **kwargs)
         return None if builder is None else builder.build(content, **kwargs)
 
-
 def _package_dependency_builder() -> NodeBuilder:
     attr_map = {
         'name': ('Name', None),
@@ -236,8 +235,9 @@ def annotation_node_builder() -> NodeBuilder:
     attr_map = {
         'node_id': ('Id', None),
         'description': ('Title', None),
+        'x': ('Left', None),
+        'y': ('Top', None),
     }
-
     return NodeBuilder(Annotation, attr_map)
 
 
@@ -251,7 +251,6 @@ def group_node_builder() -> NodeBuilder:
         'x': ('Left', None),
         'y': ('Top', None),
     }
-
     return NodeBuilder(Group, attr_map)
 
 

@@ -169,3 +169,19 @@ class AHeadlineDoc(AHeadlineContent[TFile]):
     @abstractmethod
     def _heading_content(self, **kwargs) -> List[str]:
         pass
+
+
+class TitleDocContent(ADocContent[TFile]):
+
+    def _content(self, _: int) -> List[str]:
+        lines = []
+        lines.extend(self.exporter.doc_head())
+        lines.extend(self.exporter.empty_line())
+        lines.extend(self.exporter.title(self.file))
+        return lines
+
+
+
+def title_docs(file: IModelDocs[TFile]) -> IDocContent[TFile]:
+    return TitleDocContent(file)
+

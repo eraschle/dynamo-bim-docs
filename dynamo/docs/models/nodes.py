@@ -81,7 +81,7 @@ class CodeBlocksDocs(AHeadlineDoc[TDynamoFile]):
     def _heading_content(self, **_) -> List[str]:
         values = self.value_handler
         code_blocks = self.model.get_nodes(CodeBlockNode)
-        return values.get_or_default(code_blocks, 'Keine Code Blocks')
+        return values.list_or_default(code_blocks, 'Keine Code Blocks')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         code_blocks = self.model.get_nodes(CodeBlockNode)
@@ -109,7 +109,7 @@ class PythonNodesDocs(AHeadlineDoc[TDynamoFile]):
 
     def _heading_content(self, **_) -> List[str]:
         python_codes = self.model.get_nodes(PythonCodeNode)
-        return self.value_handler.get_or_default(python_codes, 'Keine Python Nodes')
+        return self.value_handler.list_or_default(python_codes, 'Keine Python Nodes')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         python_nodes = self.model.get_nodes(PythonCodeNode)

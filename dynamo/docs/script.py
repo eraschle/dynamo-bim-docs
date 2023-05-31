@@ -2,6 +2,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import List, Optional, Sized
 
+from dynamo.docs.models import content
 from dynamo.docs import custom
 from dynamo.docs.doc_models import ScriptPathDocFile
 from dynamo.docs.docs import IModelDocs

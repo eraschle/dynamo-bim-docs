@@ -59,9 +59,13 @@ def _get_doc_heading(line: str) -> DocSection:
 class DocsParser:
     def __init__(self, node: IAnnotation) -> None:
         self.node = node
-        self._lines = self.node.description.splitlines(keepends=False)
+        self._lines = self._get_lines()
         self._section = DocSection.unknown()
         self._start_idx: int = -1
+
+    def _get_lines(self) -> List[str]:
+        desc = "" if self.node.description is None else self.node.description
+        return desc.splitlines(keepends=False)
 
     def _parse(self) -> None:
         for idx, line in enumerate(self._lines):
