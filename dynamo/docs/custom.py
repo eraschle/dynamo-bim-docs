@@ -1,15 +1,17 @@
 from typing import List, TypeVar
 
-from dynamo.docs import content
-from dynamo.docs.content import (CodeBlockDoc, CodeBlocksDocs,
+from dynamo.docs.models import content
+from dynamo.docs.models.sections import FileDescriptionDocs, FileInformationDocs, IDocContent
+from dynamo.docs.models.nodes import (CodeBlockDoc, CodeBlocksDocs,
                                  DependenciesDocs, ExternalDependenciesDocs,
-                                 ExternalDependencyDocs, FileDescriptionDocs,
-                                 FileInformationDocs, IDocContent,
+                                 ExternalDependencyDocs,
+                                 IDocContent,
                                  PackageDependenciesDocs,
                                  PackageDependencyDocs, PythonNodeDoc,
                                  PythonNodesDocs, SourceCodeDocs)
 from dynamo.docs.docs import IModelDocs
-from dynamo.docs.docs_parser import INFO, DocsNodeFactory, DocsNodeRepository
+from dynamo.docs.manual.parser import DocsNodeFactory, DocsNodeRepository
+from dynamo.docs.manual.models import INFO
 from dynamo.models.files import ADynamoFileNode, CustomFileNode
 
 TDynamo = TypeVar('TDynamo', bound=ADynamoFileNode)
