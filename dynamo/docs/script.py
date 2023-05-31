@@ -2,17 +2,21 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import List, Optional, Sized
 
-from dynamo.docs import content, custom
-from dynamo.docs.content import (AHeadingTextDocs, FileAndDirectoryDocs,
-                                 FilesAndDirectoriesDocs, IDocContent,
-                                 SolutionOrProblemDocs, TutorialDocs)
+from dynamo.docs import custom
 from dynamo.docs.doc_models import ScriptPathDocFile
 from dynamo.docs.docs import IModelDocs
+from dynamo.docs.manual.models import DOCS, FILES, INPUT, OUTPUT, SOLUTION
+from dynamo.docs.manual.parser import DocsNodeFactory, DocsNodeRepository
+from dynamo.docs.models import content
+from dynamo.docs.models.nodes import FileAndDirectoryDocs
+from dynamo.docs.models.sections import (ASectionDoc, FilesAndDirectoriesDocs,
+                                         IDocContent, SolutionOrProblemDocs,
+                                         TutorialDocs)
 from dynamo.models.files import Script
 from dynamo.utils import paths
 
 
-class ScriptInputOutputContent(AHeadingTextDocs[Script]):
+class ScriptInputOutputContent(ASectionDoc[Script]):
 
     def _files_start_with_number(self, src_file: Path) -> List[Path]:
         files = []
@@ -33,10 +37,10 @@ class ScriptInputOutputContent(AHeadingTextDocs[Script]):
         index, link, _ = indexes[0]
         if link.endswith(self.file.doc_path.suffix):
             del lines[index]
-        lines = self.values.strip_starting_empty(lines)
+        lines = self.exporter.value_handler.strip_starting_empty(lines)
         return lines
 
-    def _heading_content(self, **kwargs) -> List[str]:
+    def _headline_content(self, **kwargs) -> List[str]:
         lines = []
         link_to_other = self._link_to_other()
         if link_to_other is not None:
@@ -68,9 +72,6 @@ class ScriptInputOutputContent(AHeadingTextDocs[Script]):
 
 class ScriptInputDocs(ScriptInputOutputContent):
 
-    def __init__(self, file: IModelDocs[Script], heading: str) -> None:
-        super().__init__(file, heading)
-
     def _can_continue(self, _: Sized, index: int) -> bool:
         return index > 0
 
@@ -80,9 +81,6 @@ class ScriptInputDocs(ScriptInputOutputContent):
 
 class ScriptOutputDocs(ScriptInputOutputContent):
 
-    def __init__(self, file: IModelDocs[Script], heading: str) -> None:
-        super().__init__(file, heading)
-
     def _can_continue(self, others: Sized, index: int) -> bool:
         return index < len(others) - 1
 
@@ -90,39 +88,35 @@ class ScriptOutputDocs(ScriptInputOutputContent):
         return index + 1
 
 
-def _scripts_content(file: IModelDocs[Script]) -> List[IDocContent[Script]]:
+def _scripts_content(file_docs: DocsNodeRepository[Script]) -> List[IDocContent[Script]]:
     return [
-        content.title_docs(file),
+        content.title_docs(file_docs.file),
         TutorialDocs(
-            file=file,
+            section=DOCS, file_docs=file_docs,
             children=[
                 SolutionOrProblemDocs(
-                    file=file,
-                    heading='Problem / Lösung'
+                    section=SOLUTION, file_docs=file_docs
                 ),
                 FilesAndDirectoriesDocs(
-                    file=file,
-                    node_docs=FileAndDirectoryDocs(file=file),
-                    heading='Dateien / Verzeichnisse'
-                ),
-                ScriptInputDocs(
-                    file=file,
-                    heading='Eingabe'
+                    section=FILES, file_docs=file_docs,
+                    node_docs=FileAndDirectoryDocs(file_docs)
                 ),
                 ScriptOutputDocs(
-                    file=file,
-                    heading='Ausgabe'
+                    section=OUTPUT, file_docs=file_docs
                 ),
-            ],
-            heading='Anleitung'
+                ScriptInputDocs(
+                    section=INPUT, file_docs=file_docs
+                )
+            ]
         ),
-        custom.source_code_docs(file, with_code_block=True),
-        custom.information_docs(file),
+        custom.source_code_docs(file_docs, with_code_block=False),
+        custom.information_docs(file_docs),
     ]
 
 
 def get_docs(file: IModelDocs[Script]):
+    file_docs = DocsNodeRepository(file, factory=DocsNodeFactory())
     docs = []
-    for doc_content in _scripts_content(file):
+    for doc_content in _scripts_content(file_docs):
         docs.extend(doc_content.content(1))
     file.write(docs)

@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Protocol, TextIO, TypeVar
 
-TUri = TypeVar('TUri', bound=Path, contravariant=True)
-TContent = TypeVar('TContent', bound=Iterable)
+TUri = TypeVar("TUri", bound=Path, contravariant=True)
+TContent = TypeVar("TContent", bound=Iterable)
 
 
 class IoHandler(Protocol[TUri, TContent]):
@@ -22,8 +22,7 @@ class IoHandler(Protocol[TUri, TContent]):
 
 
 class FileHandler(ABC, IoHandler[Path, TContent]):
-
-    def __init__(self, extension: str, encoding: str = 'utf-8') -> None:
+    def __init__(self, extension: str, encoding: str = "utf-8") -> None:
         super().__init__()
         self.encoding = encoding
         self.extension = extension
@@ -36,7 +35,7 @@ class FileHandler(ABC, IoHandler[Path, TContent]):
         return path.exists()
 
     def _open(self, path: Path, callback: Callable[[TextIO], Any], **kwargs) -> Any:
-        args = {'mode': 'r', 'encoding': self.encoding}
+        args = {"mode": "r", "encoding": self.encoding}
         args.update(kwargs)
         with open(self._as_str(path), **args) as file:
             return callback(file, **kwargs)
@@ -51,7 +50,7 @@ class FileHandler(ABC, IoHandler[Path, TContent]):
         return self._open(path, self._read, **kwargs)
 
     def write(self, path: Path, content: TContent, **kwargs) -> None:
-        args = {'mode': 'w', 'encoding': self.encoding}
+        args = {"mode": "w", "encoding": self.encoding}
         args.update(kwargs)
         with codecs.open(self._as_str(path), **args) as file:
             self._write(file, content, **kwargs)
@@ -66,45 +65,50 @@ class FileHandler(ABC, IoHandler[Path, TContent]):
 
 
 class TextHandler(FileHandler[Iterable[str]]):
-
     def _read(self, file: TextIO, **kwargs) -> Iterable[str]:
         return file.readlines()
 
     def _write(self, file: TextIO, content: Iterable[str], **kwargs) -> None:
-        content = [line if line.endswith('\n') else f'{line}\n' for line in content]
+        content = [line if line.endswith("\n") else f"{line}\n" for line in content]
         file.writelines(content)
 
 
 class OrgHandler(TextHandler):
-
-    def __init__(self, extension: str = '.org', encoding: str = 'utf-8') -> None:
+    def __init__(self, extension: str = ".org", encoding: str = "utf-8") -> None:
         super().__init__(extension, encoding)
 
 
 class CsvHandler(FileHandler[List[List[Any]]]):
-
-    def __init__(self, delimiter: str, extension: str = '.csv', encoding: str = 'utf-8') -> None:
+    def __init__(
+        self, delimiter: str, extension: str = ".csv", encoding: str = "utf-8"
+    ) -> None:
         super().__init__(extension, encoding)
         self.delimiter = delimiter
 
     def _read(self, file: TextIO, **kwargs) -> List[List[Any]]:
         return [line.split(self.delimiter) for line in file.readlines()]
 
-    def _to_dict(self, headers: Iterable[str], values: List[Any], **kwargs) -> Dict[str, Any]:
+    def _to_dict(
+        self, headers: Iterable[str], values: List[Any], **kwargs
+    ) -> Dict[str, Any]:
         value_dict = {}
         for index, header in enumerate(headers):
-            value = values[index] if index < len(values) else kwargs.get('default', None)
+            value = (
+                values[index] if index < len(values) else kwargs.get("default", None)
+            )
             value_dict[header] = value
         return value_dict
 
-    def _as_dict(self, headers: Iterable[str], lines: Iterable[List[Any]], **kwargs) -> List[Dict[str, Any]]:
+    def _as_dict(
+        self, headers: Iterable[str], lines: Iterable[List[Any]], **kwargs
+    ) -> List[Dict[str, Any]]:
         values = []
         for line in lines:
             values.append(self._to_dict(headers, line, **kwargs))
         return values
 
     def read_as_dict(self, path: Path, **kwargs) -> List[Dict[str, Any]]:
-        hdr_idx = kwargs.get('header_idx', 0)
+        hdr_idx = kwargs.get("header_idx", 0)
         lines = self.read(path)
         if len(lines) <= hdr_idx:
             return []
@@ -116,19 +120,18 @@ class CsvHandler(FileHandler[List[List[Any]]]):
 
 
 class JsonHandler(FileHandler[Dict[str, Any]]):
-
-    def __init__(self, extension: str = '.json', encoding: str = 'utf-8') -> None:
+    def __init__(self, extension: str = ".json", encoding: str = "utf-8") -> None:
         super().__init__(extension, encoding)
 
     def can_read(self, path: Path, **kwargs) -> bool:
         if not super().can_read(path, **kwargs):
             return False
-        return self._read_first_line(path, **kwargs).startswith('{')
+        return self._read_first_line(path, **kwargs).startswith("{")
 
     def _read(self, file: TextIO, **kwargs) -> Dict[str, Any]:
         return json.loads(file.read())
 
     def _write(self, file: TextIO, content: Dict[str, Any], **kwargs) -> None:
-        args = {'indent': 4, 'ensure_ascii': False}
+        args = {"indent": 4, "ensure_ascii": False}
         args.update(**kwargs)
         json.dump(content, file, **args)

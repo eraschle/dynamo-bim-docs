@@ -1,8 +1,9 @@
 from typing import Any, Iterable, List, Optional, Tuple
 
-from dynamo.docs.docs import IDocsFile, IExporter, ValueHandler
-from dynamo.io.file import FileHandler, OrgHandler
+from dynamo.docs.docs import IDocsFile, IExporter, IValueHandler
+from dynamo.io.file import OrgHandler
 from dynamo.utils import paths, string
+from dynamo.utils.values import ValueHandler
 
 
 class OrgLinkCreator:
@@ -107,16 +108,16 @@ class OrgTableCreator:
 class OrgExporter(IExporter):
     heading_prefix = "*"
 
-    def __init__(self, handler: FileHandler, values: ValueHandler,
-                 link_creator: Optional[OrgLinkCreator] = None) -> None:
+    def __init__(self, file_handler: OrgHandler, value_handler: IValueHandler,
+                 link_handler: OrgLinkCreator) -> None:
         super().__init__()
-        self.handler = handler
-        self.values = values
-        self.link_creator = link_creator or OrgLinkCreator(['file', 'http', 'https'])
+        self.file_handler = file_handler
+        self.value_handler = value_handler
+        self.link_handler = link_handler
         self._manual_lines: Optional[List[str]] = None
 
     def _get_preamble(self, name: str, value: str) -> str:
-        name = f'{name.upper()}:'
+        name = f'{name.lower()}:'
         return f'#+{name:<15}{value.strip()}'
 
     def doc_head(self) -> List[str]:
@@ -128,7 +129,7 @@ class OrgExporter(IExporter):
         ]
 
     def empty_line(self, amount: int = 1) -> List[str]:
-        return self.values.empty_line(amount)
+        return self.value_handler.empty_line(amount)
 
     def title(self, file: IDocsFile):
         return [self._get_preamble("Title", file.display_name)]
@@ -155,11 +156,11 @@ class OrgExporter(IExporter):
         return [self._as_list_line(value, symbol, level) for value in values]
 
     def url_link(self, url: str, display_name: Optional[str]) -> List[str]:
-        return [self.link_creator.create(url, display_name, 'https')]
+        return [self.link_handler.create(url, display_name, 'https')]
 
     def file_link(self, file: IDocsFile, relative_to: IDocsFile) -> str:
         relative = paths.relative_to(file.doc_path, relative_to.doc_path)
-        return self.link_creator.create(relative, file.display_name, 'file')
+        return self.link_handler.create(relative, file.display_name, 'file')
 
     def link_indexes(self, lines: List[str]) -> List[Tuple[int, str, Optional[str]]]:
         indexes = []
@@ -223,4 +224,4 @@ def get_org_exporter() -> IExporter:
     file_handler = OrgHandler()
     value_handler = ValueHandler()
     link_handler = OrgLinkCreator(['file', 'http', 'https'])
-    return OrgExporter(handler=file_handler, values=value_handler, link_creator=link_handler)
+    return OrgExporter(file_handler=file_handler, value_handler=value_handler, link_handler=link_handler)

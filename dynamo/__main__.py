@@ -2,24 +2,23 @@ import os
 from pathlib import Path
 from typing import Iterable, List
 
-from dynamo.command.run import execute_quality_checks
 from dynamo.docs import custom, manager, package, script
 from dynamo.docs.doc_models import (CustomNodeDocFile, PackageDocFile,
                                     ScriptDocFile)
 from dynamo.docs.docs import IDocsFile, IDocsManager
 from dynamo.models.files import Package
-from dynamo.service import dynamo, get_packages, get_scripts, json_gateway
+from dynamo.service import dynamo, json_gateway
 from dynamo.service.protocol import IDynamoManager
 from dynamo.source.gateway import INodeGateway
 
 
-def read_content(manager: IDynamoManager):
-    packages = get_packages(manager)
-    scripts = get_scripts(manager)
+# def read_content(manager: IDynamoManager):
+#     packages = get_packages(manager)
+#     scripts = get_scripts(manager)
 
 
-def quality_checks(manager: IDynamoManager):
-    execute_quality_checks(manager)
+# def quality_checks(manager: IDynamoManager):
+#     execute_quality_checks(manager)
 
 
 def _documentation_packages(gateway: INodeGateway, manager: IDocsManager) -> List[IDocsFile]:

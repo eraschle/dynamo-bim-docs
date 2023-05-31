@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Iterable, List, OrderedDict, Tuple, Type, TypeVar
 
-from dynamo.models.files import (ADynamoFileNode, AFileBaseModel, Package,
-                                 PythonCustomFileNode, Script)
+from dynamo.models.files import (ADynamoFileNode, AFileBaseModel,
+                                 Package, PythonCustomFileNode, Script)
 from dynamo.models.nodes import DynamoNode
 from dynamo.source.gateway import IBuilder, ISourceRepository
 from dynamo.source.json.builder_nodes import (DependencyBuilder,

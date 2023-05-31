@@ -232,13 +232,32 @@ class DependencyBuilder(IBuilder[IDependency, Dict[str, Any]]):
         return None if builder is None else builder.build(content, **kwargs)
 
 
+class AnnotationBuilder(NodeBuilder[Annotation]):
+
+    def __init__(self, attr_map: Dict[str, Tuple[str, Any]]) -> None:
+        super().__init__(Annotation, attr_map, {})
+
+    def can_build(self, content: Dict[str, Any], **kwargs) -> bool:
+        return len(content.get('Nodes', [])) == 0
+
+
 def annotation_node_builder() -> NodeBuilder:
     attr_map = {
         'node_id': ('Id', None),
         'description': ('Title', None),
+        'x': ('Left', None),
+        'y': ('Top', None),
     }
+    return AnnotationBuilder(attr_map)
 
-    return NodeBuilder(Annotation, attr_map)
+
+class GroupBuilder(NodeBuilder[Group]):
+
+    def __init__(self, attr_map: Dict[str, Tuple[str, Any]]) -> None:
+        super().__init__(Group, attr_map, {})
+
+    def can_build(self, content: Dict[str, Any], **kwargs) -> bool:
+        return len(content.get('Nodes', [])) > 0
 
 
 def group_node_builder() -> NodeBuilder:
@@ -251,8 +270,7 @@ def group_node_builder() -> NodeBuilder:
         'x': ('Left', None),
         'y': ('Top', None),
     }
-
-    return NodeBuilder(Group, attr_map)
+    return GroupBuilder(attr_map)
 
 
 def dynamo_info_builder() -> NodeBuilder:

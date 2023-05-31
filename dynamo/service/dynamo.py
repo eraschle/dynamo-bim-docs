@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -5,12 +6,24 @@ from dynamo.models.files import CustomFileNode, Package
 from dynamo.models.nodes import CustomNode, ICustomNode
 from dynamo.service.protocol import IDynamoManager
 
+WINDOWS = Path(
+    'C:/workspace/projects/weichenlos/Bestandsmodellierung/00_Projektübergreifend/Skripte und Vorlagen')
+WSL = Path('/home/elyo/workspace/__data__')
+
+
+def _to_os(path: str) -> Path:
+    if os.name == 'nt':
+        return WINDOWS / path
+    return WSL / path.lower()
+
+
 DYNAMO_ROOT = Path(
-    'C:/workspace/projects/weichenlos/Bestandsmodellierung/00_Projektübergreifend/Skripte und Vorlagen/Dynamo'
+    _to_os('Dynamo')
 )
 
+
 DOC_ROOT = Path(
-    'C:/workspace/projects/weichenlos/Bestandsmodellierung/00_Projektübergreifend/Skripte und Vorlagen/Dynamo/docs/org/'
+    _to_os('Dynamo/docs/org/')
 )
 
 
