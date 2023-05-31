@@ -2,30 +2,30 @@ from ctypes import ArgumentError
 from typing import List, Tuple
 
 from dynamo.docs import content
-from dynamo.docs.content import AHeadineDoc, IDocContent
+from dynamo.docs.content import AHeadlineDoc, IDocContent
 from dynamo.docs.doc_models import CustomNodeDocFile
 from dynamo.docs.docs import IDocsFile, IModelDocs
 from dynamo.models.files import Package
 
 
-class PackageContentDocs(AHeadineDoc[Package]):
+class PackageContentDocs(AHeadlineDoc[Package]):
 
     def _heading_content(self, **_) -> List[str]:
         return self.value_handler.get_or_default(self.model.info.contents, 'Keine Inhalt')
 
 
-class PackageDescriptionDocs(AHeadineDoc[Package]):
+class PackageDescriptionDocs(AHeadlineDoc[Package]):
 
     def _heading_content(self, **_) -> List[str]:
         return self.value_handler.get_or_default(self.model.description, 'Keine Beschreibung')
 
 
-class PackageInformationDocs(AHeadineDoc[Package]):
+class PackageInformationDocs(AHeadlineDoc[Package]):
 
     def __init__(self, file: IModelDocs[Package],
                  children: List[IDocContent[Package]],
-                 heading: str) -> None:
-        super().__init__(file, heading)
+                 headline: str) -> None:
+        super().__init__(file, headline)
         self.children = children
 
     def _heading_content(self, **_) -> List[str]:
@@ -45,7 +45,7 @@ class PackageInformationDocs(AHeadineDoc[Package]):
         return lines
 
 
-class PackageCustomNodeDocs(AHeadineDoc[Package]):
+class PackageCustomNodeDocs(AHeadlineDoc[Package]):
 
     def _get_category(self, **kwargs) -> str:
         arg = 'category'
@@ -69,12 +69,12 @@ class PackageCustomNodeDocs(AHeadineDoc[Package]):
         return lines
 
 
-class PackageNodesDocs(AHeadineDoc[Package]):
+class PackageNodesDocs(AHeadlineDoc[Package]):
 
     def __init__(self, file: IModelDocs[Package],
                  docs: IDocContent[Package],
-                 heading: str) -> None:
-        super().__init__(file, heading)
+                 headline: str) -> None:
+        super().__init__(file, headline)
         self.docs = docs
 
     def _categories(self) -> List[str]:
@@ -106,11 +106,11 @@ def packages_content(file: IModelDocs[Package]) -> List[IDocContent[Package]]:
                     file=file, headline='Inhalt'
                 )
             ],
-            heading='Informationen'),
+            headline='Informationen'),
         PackageNodesDocs(
             file=file,
-            docs=PackageCustomNodeDocs(file=file),
-            heading='Node Dokumentationen')
+            docs=PackageCustomNodeDocs(file=file, headline=''),
+            headline='Node Dokumentationen')
     ]
 
 

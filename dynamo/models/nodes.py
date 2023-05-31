@@ -21,10 +21,13 @@ class ABaseNode(ABaseModel):
 
 
 @dataclass
-class Annotation(ABaseNode, IAnnotation):
+class Annotation(IAnnotation):
+    node_id: str = field(repr=False, compare=True)
+    x: float = field(compare=False, repr=False)
+    y: float = field(compare=False, repr=False)
     description: str = field(repr=True, compare=False)
-    name: str = field(default='Annotation', repr=True, compare=False)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)
+    name: str = field(default='Annotation', repr=True, compare=False)
 
 
 @dataclass

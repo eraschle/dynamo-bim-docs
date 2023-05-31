@@ -164,7 +164,7 @@ class AHeadlineContent(ADocContent[TFile]):
         )
 
 
-class AHeadineDoc(AHeadlineContent[TFile]):
+class AHeadlineDoc(AHeadlineContent[TFile]):
 
     def __init__(self, file: IModelDocs[TFile], headline: str) -> None:
         super().__init__(file)
@@ -346,7 +346,7 @@ class PackageDependencyDocs(ANodeDocsContent[TDynamoFile]):
         return self.exporter.as_table(["Name", "UUID"], lines)
 
 
-class PackageDependenciesDocs(AHeadineDoc[TDynamoFile]):
+class PackageDependenciesDocs(AHeadlineDoc[TDynamoFile]):
 
     def __init__(self, file: IModelDocs[TDynamoFile],
                  node_docs: IDocContent[TDynamoFile],
@@ -384,7 +384,7 @@ class ExternalDependencyDocs(ANodeDocsContent[TDynamoFile]):
         return self.exporter.as_list(lines)
 
 
-class ExternalDependenciesDocs(AHeadineDoc[TDynamoFile]):
+class ExternalDependenciesDocs(AHeadlineDoc[TDynamoFile]):
 
     def __init__(self, file: IModelDocs[TDynamoFile],
                  node_docs: IDocContent[TDynamoFile], headline: str) -> None:
@@ -405,7 +405,7 @@ class ExternalDependenciesDocs(AHeadineDoc[TDynamoFile]):
         return lines
 
 
-class DependenciesDocs(AHeadineDoc[TDynamoFile]):
+class DependenciesDocs(AHeadlineDoc[TDynamoFile]):
 
     def __init__(self, file: IModelDocs[TDynamoFile],
                  children: List[IDocContent[TDynamoFile]], headline: str) -> None:
@@ -431,7 +431,7 @@ class CodeBlockDoc(ANodeDocsContent[TDynamoFile]):
         return lines
 
 
-class CodeBlocksDocs(AHeadineDoc[TDynamoFile]):
+class CodeBlocksDocs(AHeadlineDoc[TDynamoFile]):
 
     def __init__(self, file: IModelDocs[TDynamoFile],
                  node_docs: IDocContent[TDynamoFile], headline: str) -> None:
@@ -460,7 +460,7 @@ class PythonNodeDoc(ANodeDocsContent[TDynamoFile]):
         return lines
 
 
-class PythonNodesDocs(AHeadineDoc[TDynamoFile]):
+class PythonNodesDocs(AHeadlineDoc[TDynamoFile]):
 
     def __init__(self, file: IModelDocs[TDynamoFile],
                  node_doc: IDocContent[TDynamoFile], headline: str) -> None:
@@ -480,7 +480,7 @@ class PythonNodesDocs(AHeadineDoc[TDynamoFile]):
         return lines
 
 
-class SourceCodeDocs(AHeadineDoc[TDynamoFile]):
+class SourceCodeDocs(AHeadlineDoc[TDynamoFile]):
 
     def __init__(self, file: IModelDocs[TDynamoFile],
                  children: List[IDocContent[TDynamoFile]], headline: str) -> None:

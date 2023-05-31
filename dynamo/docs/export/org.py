@@ -3,7 +3,7 @@ from typing import Any, Iterable, List, Optional, Tuple
 from dynamo.docs.docs import IDocsFile, IExporter
 from dynamo.io.file import OrgHandler
 from dynamo.utils import paths, string
-from dynamo.utils.values import IValueHandler
+from dynamo.utils.values import IValueHandler, ValueHandler
 
 
 class OrgLinkCreator:
@@ -111,7 +111,7 @@ class OrgExporter(IExporter):
     def __init__(self, file_handler: OrgHandler, value_handler: IValueHandler,
                  link_handler: OrgLinkCreator) -> None:
         super().__init__()
-        self.file_hadler = file_handler
+        self.file_handler = file_handler
         self.value_handler = value_handler
         self.link_handler = link_handler
         self._manual_lines: Optional[List[str]] = None
