@@ -16,11 +16,12 @@ class ABaseModel(IBaseModel):
 @dataclass
 class ABaseNode(ABaseModel):
     node_id: str = field(repr=False, compare=True)
+    x: float = field(compare=False, repr=False)
+    y: float = field(compare=False, repr=False)
 
 
 @dataclass
-class Annotation(IAnnotation):
-    node_id: str = field(repr=False, compare=True)
+class Annotation(ABaseNode, IAnnotation):
     description: str = field(repr=True, compare=False)
     name: str = field(default='Annotation', repr=True, compare=False)
     group: Optional[IGroup] = field(default=None, compare=False, repr=False)
@@ -31,9 +32,8 @@ class Group(ABaseNode, IGroup):
     color: str = field(compare=False, repr=False)
     description: str = field(compare=False, repr=False)
     node_ids: List[str] = field(compare=False, repr=False)
-    x: float = field(compare=False, repr=False)
-    y: float = field(compare=False, repr=False)
     _nodes: List[ABaseNode] = field(default_factory=list, compare=False, repr=False)
+    group: Optional[IGroup] = field(default=None, compare=False, repr=False)
 
     @property
     def nodes(self) -> List[ABaseNode]:
@@ -62,8 +62,6 @@ class DynamoNode(ABaseNode):
     description: str = field(repr=False, compare=False)
     disabled: bool = field(repr=False, compare=False)
     show_geometry: bool = field(repr=False, compare=False)
-    x: float = field(compare=False, repr=False)
-    y: float = field(compare=False, repr=False)
 
 
 @dataclass

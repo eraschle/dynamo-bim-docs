@@ -50,7 +50,7 @@ class DynamoDocManager(IDocsManager):
             dest_path = _get_doc_path(self.script_src_path, self.script_doc_path, path)
         else:
             dest_path = _get_doc_path(self.package_src_path, self.package_doc_path, path)
-        return dest_path.with_suffix(self.exporter.handler.extension)
+        return dest_path.with_suffix(self.exporter.file_handler.extension)
 
     def doc_file_of(self, node: ICustomNode) -> Optional[IDocsFile]:
         file_node = self._manager.get(node)

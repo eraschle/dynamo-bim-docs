@@ -1,18 +1,19 @@
 from abc import abstractmethod
 from ctypes import ArgumentError
-from typing import List, Protocol, Type, TypeVar
+from typing import List, Protocol, Type, TypeVar, Any
 
-from dynamo.docs.docs import IDocsManager, IExporter, IModelDocs, ValueHandler
+from dynamo.docs.docs import IDocsManager, IExporter, IModelDocs
+from dynamo.docs.docs_parser import DocSection, DocsNodeRepository
 from dynamo.models.files import CustomFileNode
-from dynamo.models.model import IBaseModel, IDynamoFile, IFileModel, INode
+from dynamo.models.model import IBaseModel, IDynamoFile, IFileModel, IModelWithId, INode
 from dynamo.models.nodes import (APathInputNode, CodeBlockNode, CustomNode,
                                  DirInputNode, ExternalDependency,
                                  FileInputNode, PackageDependency,
                                  PythonCodeNode)
 from dynamo.utils import checks
+from dynamo.utils.values import IValueHandler
 
 TFile = TypeVar('TFile', bound=IFileModel)
-TDynamo = TypeVar('TDynamo', bound=IDynamoFile)
 
 
 class IDocContent(Protocol[TFile]):
@@ -24,10 +25,6 @@ class IDocContent(Protocol[TFile]):
 
     @property
     def exporter(self) -> IExporter:
-        ...
-
-    @property
-    def values(self) -> ValueHandler:
         ...
 
     @property
@@ -51,17 +48,17 @@ class ADocContent(IDocContent[TFile]):
         return self.manager.exporter
 
     @property
-    def values(self) -> ValueHandler:
-        return self.exporter.values
+    def value_handler(self) -> IValueHandler:
+        return self.exporter.value_handler
 
     def _strip_empty(self, content: List[str]) -> List[str]:
-        return self.values.strip_empty(content)
+        return self.value_handler.strip_empty(content)
 
     def _lstrip_empty(self, content: List[str]) -> List[str]:
-        return self.values.strip_starting_empty(content)
+        return self.value_handler.strip_starting_empty(content)
 
     def _rstrip_empty(self, content: List[str]) -> List[str]:
-        return self.values.strip_ending_empty(content)
+        return self.value_handler.strip_ending_empty(content)
 
     @property
     def model(self) -> TFile:
@@ -81,7 +78,7 @@ class ADocContent(IDocContent[TFile]):
     def _content(self, level: int, **kwargs) -> List[str]:
         pass
 
-    def _get_doc_content(self, child: IDocContent[TFile], level: int, **kwargs) -> List[str]:
+    def _get_doc_content(self, child: IDocContent[Any], level: int, **kwargs) -> List[str]:
         content = child.content(level, **kwargs)
         content = self._rstrip_empty(content)
         return content
@@ -93,7 +90,7 @@ class ADocContent(IDocContent[TFile]):
 TNode = TypeVar('TNode', bound=IBaseModel)
 
 
-class AHeadingContent(ADocContent[TFile]):
+class AHeadlineContent(ADocContent[TFile]):
 
     def __init__(self, file: IModelDocs[TFile]) -> None:
         super().__init__(file)
@@ -119,12 +116,12 @@ class AHeadingContent(ADocContent[TFile]):
         lines = []
         heading = self._heading(level, **kwargs)
         self._set_existing_content(heading)
-        # lines.extend(self.values.remove_starting_and_ending_empty_lines(heading))
+        # lines.extend(self.exporter.remove_starting_and_ending_empty_lines(heading))
         lines.extend(heading)
         lines.extend(self.exporter.empty_line())
         content = self._heading_content(level=level, **kwargs)
         lines.extend(content)
-        # lines.extend(self.values.remove_starting_and_ending_empty_lines(content))
+        # lines.extend(self.exporter.remove_starting_and_ending_empty_lines(content))
         return lines
 
     @abstractmethod
@@ -136,45 +133,74 @@ class AHeadingContent(ADocContent[TFile]):
         pass
 
     def _heading_value(self, lines: List[str]) -> str:
-        heading = self.values.strip_starting_empty(lines)
+        heading = self.value_handler.strip_starting_empty(lines)
         if len(heading) < 1:
             raise ValueError(f'No Heading in {lines}')
         return heading[0]
 
     def _clean_existing_content(self) -> List[str]:
         lines = self._strip_empty(self._existing_content[1:])
-        lines = self.values.remove_no_manual_docs(lines)
+        lines = self.value_handler.remove_default_doc_value(lines)
         return lines
 
     def _set_existing_content(self, heading_lines: List[str]) -> None:
         heading = self._heading_value(heading_lines)
-        lines = []
         for line in self.file.existing_docs():
-            if len(lines) == 0 and not line.startswith(heading):
+            if len(self._existing_content) == 0 and not line.startswith(heading):
                 continue
-            elif len(lines) > 0 and self.exporter.is_heading(line):
+            elif self._is_next_heading(line):
                 break
-            lines.append(line.rstrip())
-        self._existing_content = lines
+            self._existing_content.append(line.rstrip())
+
+    def _is_next_heading(self, line: str) -> bool:
+        return self.exporter.is_heading(line)
 
     def _manual_docs(self) -> List[str]:
+        values = self.value_handler
         existing = self._clean_existing_content()
         existing = self._strip_empty(existing)
-        return self.values.value_or_default(existing, self.values.no_manual_doc)
+        return values.get_or_default(
+            existing, values.default_docs
+        )
 
 
-class AHeadingTextDocs(AHeadingContent[TFile]):
+class AHeadineDoc(AHeadlineContent[TFile]):
 
-    def __init__(self, file: IModelDocs[TFile], heading: str) -> None:
+    def __init__(self, file: IModelDocs[TFile], headline: str) -> None:
         super().__init__(file)
-        self.heading = heading
+        self.headline = headline
 
     def _heading(self, level: int, **_) -> List[str]:
-        return self.exporter.heading(self.heading, level)
+        return self.exporter.heading(self.headline, level)
 
     @abstractmethod
     def _heading_content(self, **kwargs) -> List[str]:
         pass
+
+
+TDynamoFile = TypeVar('TDynamoFile', bound=IDynamoFile)
+
+
+class ASectionDoc(AHeadlineContent[TDynamoFile]):
+
+    def __init__(self, section: DocSection, file_docs: DocsNodeRepository[TDynamoFile]) -> None:
+        super().__init__(file=file_docs.file)
+        self.section = section
+        self.file_docs = file_docs
+
+    def _heading(self, level: int, **_) -> List[str]:
+        return self.exporter.heading(self.section.title, level)
+
+    def _heading_content(self, **kwargs) -> List[str]:
+        level = self._get_level(**kwargs)
+        section_docs = self.file_docs.section_doc(self.section)
+        if checks.is_blank(section_docs):
+            return self._manual_docs()
+        lines = []
+        for section_doc in section_docs:
+            content = section_doc.content(level=level, **kwargs)
+            lines.extend(content)
+        return lines
 
 
 class TitleDocContent(ADocContent[TFile]):
@@ -191,16 +217,13 @@ def title_docs(file: IModelDocs[TFile]) -> IDocContent[TFile]:
     return TitleDocContent(file)
 
 
-class TutorialDocs(AHeadingTextDocs[TFile]):
+class TutorialDocs(ASectionDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TFile],
-                 children: List[IDocContent[TFile]],
-                 heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, section: DocSection,
+                 children: List[IDocContent[TDynamoFile]],
+                 file_docs: DocsNodeRepository[TDynamoFile]) -> None:
+        super().__init__(section, file_docs)
         self.children = children
-
-    def _heading_content(self, **_) -> List[str]:
-        return self._manual_docs()
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         lines = super()._children_content(level, **kwargs)
@@ -210,28 +233,34 @@ class TutorialDocs(AHeadingTextDocs[TFile]):
         return lines
 
 
-class SolutionOrProblemDocs(AHeadingTextDocs[TDynamo]):
+class SolutionOrProblemDocs(ASectionDoc[TDynamoFile]):
 
     def _heading_content(self, **_) -> List[str]:
         return self._manual_docs()
 
+    def _children_content(self, level: int, **kwargs) -> List[str]:
+        lines = super()._children_content(level, **kwargs)
+        for child in self.file_docs.section_doc(self.section):
+            content = self._get_doc_content(child, level, **kwargs)
+            lines.extend(content)
+        return lines
 
-class FileInformationDocs(AHeadingTextDocs[TDynamo]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 children: List[IDocContent[TDynamo]],
-                 heading: str) -> None:
-        super().__init__(file, heading)
+class FileInformationDocs(ASectionDoc[TDynamoFile]):
+
+    def __init__(self, children: List[IDocContent[TDynamoFile]],
+                 section: DocSection, file_docs: DocsNodeRepository[TDynamoFile]) -> None:
+        super().__init__(section=section, file_docs=file_docs)
         self.children = children
 
     def _heading_content(self, **_) -> List[str]:
         lines = [
-            self.values.values_or_default(['UUID', self.model.uuid]),
-            self.values.values_or_default(['Version', self.model.info.version]),
+            self.value_handler.list_or_default(['UUID', self.model.uuid]),
+            self.value_handler.list_or_default(['Version', self.model.info.version]),
         ]
         if isinstance(self.model, CustomFileNode):
             lines.append(
-                self.values.values_or_default(['Kategorie', self.model.category])
+                self.value_handler.list_or_default(['Kategorie', self.model.category])
             )
         return self.exporter.as_table(["Attribut", "Wert"], lines)
 
@@ -243,48 +272,60 @@ class FileInformationDocs(AHeadingTextDocs[TDynamo]):
         return lines
 
 
-class FileDescriptionDocs(AHeadingTextDocs[TFile]):
+class FileDescriptionDocs(ASectionDoc[TDynamoFile]):
 
     def _heading_content(self, **_) -> List[str]:
-        return self.values.value_or_default(self.model.description, 'Keine Beschreibung')
+        return self.value_handler.get_or_default(self.model.description, 'Keine Beschreibung')
 
 
-class ANodeDocsContent(AHeadingContent[TFile]):
+class ANodeDocsContent(AHeadlineContent[TDynamoFile]):
+
+    def __init__(self, file_docs: DocsNodeRepository[TDynamoFile]) -> None:
+        super().__init__(file=file_docs.file)
+        self.file_docs = file_docs
 
     def _heading(self, level: int, **kwargs) -> List[str]:
         node = self._get_node(IBaseModel, **kwargs)
         return self.exporter.heading(node.name, level)
 
-    def _heading_content(self, **kwargs) -> List[str]:
-        node = self._get_node(INode, **kwargs)
+    def _information_table(self, node: INode) -> List[str]:
+        values = self.value_handler
         group_name = None if node.group is None else node.group.name
         lines = [
             [
-                'Beschreibung',
-                *self.values.value_or_default(node.description, default='Keine Beschreibung')
+                'Beschreibung', *values.get_or_default(node.description,
+                                                       default='Keine Beschreibung')
             ],
             [
-                'Gruppe',
-                *self.values.value_or_default(group_name, default='Keine Gruppe')
+                'Gruppe', *values.get_or_default(group_name, default='Keine Gruppe')
             ],
             [
-                'Aktiviert',
-                *self.values.bool_as_str(not node.disabled)
+                'Aktiviert', *values.bool_as_str(not node.disabled)
             ],
             [
-                'Zeigt Geometrie',
-                *self.values.bool_as_str(node.show_geometry)
+                'Zeigt Geometrie', *values.bool_as_str(node.show_geometry)
             ],
         ]
         if isinstance(node, PythonCodeNode):
-            lines.append([
-                'Engine',
-                *self.values.value_or_default(node.engine, 'Keine Python Engine')
-            ])
+            lines.append(
+                [
+                    'Engine', *values.get_or_default(node.engine, 'Keine Python Engine')
+                ])
         return self.exporter.as_table(["Attribut", "Wert"], lines)
 
+    def _heading_content(self, **kwargs) -> List[str]:
+        node = self._get_node(INode, **kwargs)
+        docs_lines = self._information_table(node)
+        node_docs = self.file_docs.node_docs(node)
+        if node_docs is None:
+            return docs_lines
+        level = self._get_level()
+        docs_lines.extend(self.exporter.empty_line())
+        docs_lines.extend(node_docs.content(level, **kwargs))
+        return docs_lines
 
-class PackageDependencyDocs(ANodeDocsContent[TDynamo]):
+
+class PackageDependencyDocs(ANodeDocsContent[TDynamoFile]):
 
     def _package_name(self, node: CustomNode) -> str:
         doc_file = self.manager.doc_file_of(node)
@@ -297,23 +338,26 @@ class PackageDependencyDocs(ANodeDocsContent[TDynamo]):
         return self.exporter.heading(package.full_name, level)
 
     def _heading_content(self, **kwargs) -> List[str]:
+        values = self.value_handler
         package = self._get_node(PackageDependency, **kwargs)
         if checks.is_blank(package.nodes):
-            return self.values.value_or_default(package.nodes, 'Keine Nodes')
+            return values.get_or_default(package.nodes, 'Keine Nodes')
         lines = [[self._package_name(node), node.uuid] for node in package.nodes]
         return self.exporter.as_table(["Name", "UUID"], lines)
 
 
-class PackageDependenciesDocs(AHeadingTextDocs[TDynamo]):
+class PackageDependenciesDocs(AHeadineDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 node_docs: IDocContent[TDynamo], heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, file: IModelDocs[TDynamoFile],
+                 node_docs: IDocContent[TDynamoFile],
+                 headline: str) -> None:
+        super().__init__(file=file, headline=headline)
         self.node_docs = node_docs
 
     def _heading_content(self, **_) -> List[str]:
+        values = self.value_handler
         packages = self.model.get_dependencies(PackageDependency)
-        return self.values.default_if_empty(packages, 'Keine Abhängigkeiten zu Packages')
+        return values.default_or_empty(packages, 'Keine Abhängigkeiten zu Packages')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         packages = self.model.get_dependencies(PackageDependency)
@@ -324,7 +368,7 @@ class PackageDependenciesDocs(AHeadingTextDocs[TDynamo]):
         return lines
 
 
-class ExternalDependencyDocs(ANodeDocsContent[TDynamo]):
+class ExternalDependencyDocs(ANodeDocsContent[TDynamoFile]):
 
     def _dependency_name(self, node: INode) -> str:
         if not isinstance(node, APathInputNode):
@@ -332,23 +376,25 @@ class ExternalDependencyDocs(ANodeDocsContent[TDynamo]):
         return node.path.name
 
     def _heading_content(self, **kwargs) -> List[str]:
+        values = self.value_handler
         external = self._get_node(ExternalDependency, **kwargs)
         if checks.is_blank(external.nodes):
-            return self.values.value_or_default(external.nodes, 'Keine Nodes')
+            return values.get_or_default(external.nodes, 'Keine Nodes')
         lines = [self._dependency_name(node) for node in external.nodes]
         return self.exporter.as_list(lines)
 
 
-class ExternalDependenciesDocs(AHeadingTextDocs[TDynamo]):
+class ExternalDependenciesDocs(AHeadineDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 node_docs: IDocContent[TDynamo], heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, file: IModelDocs[TDynamoFile],
+                 node_docs: IDocContent[TDynamoFile], headline: str) -> None:
+        super().__init__(file=file, headline=headline)
         self.node_docs = node_docs
 
     def _heading_content(self, **_) -> List[str]:
+        values = self.value_handler
         externals = self.model.get_dependencies(ExternalDependency)
-        return self.values.value_or_default(externals, 'Keine Externen Abhängigkeiten')
+        return values.get_or_default(externals, 'Keine Externen Abhängigkeiten')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         externals = self.model.get_dependencies(ExternalDependency)
@@ -359,11 +405,11 @@ class ExternalDependenciesDocs(AHeadingTextDocs[TDynamo]):
         return lines
 
 
-class DependenciesDocs(AHeadingTextDocs[TDynamo]):
+class DependenciesDocs(AHeadineDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 children: List[IDocContent[TDynamo]], heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, file: IModelDocs[TDynamoFile],
+                 children: List[IDocContent[TDynamoFile]], headline: str) -> None:
+        super().__init__(file=file, headline=headline)
         self.children = children
 
     def _heading_content(self, **_) -> List[str]:
@@ -377,7 +423,7 @@ class DependenciesDocs(AHeadingTextDocs[TDynamo]):
         return lines
 
 
-class CodeBlockDocs(ANodeDocsContent[TDynamo]):
+class CodeBlockDoc(ANodeDocsContent[TDynamoFile]):
 
     def _heading_content(self, **kwargs) -> List[str]:
         node = self._get_node(CodeBlockNode, **kwargs)
@@ -385,16 +431,17 @@ class CodeBlockDocs(ANodeDocsContent[TDynamo]):
         return lines
 
 
-class CodeBlocksDocs(AHeadingTextDocs[TDynamo]):
+class CodeBlocksDocs(AHeadineDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 node_docs: IDocContent[TDynamo], heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, file: IModelDocs[TDynamoFile],
+                 node_docs: IDocContent[TDynamoFile], headline: str) -> None:
+        super().__init__(file=file, headline=headline)
         self.node_docs = node_docs
 
     def _heading_content(self, **_) -> List[str]:
+        values = self.value_handler
         code_blocks = self.model.get_nodes(CodeBlockNode)
-        return self.values.default_if_empty(code_blocks, 'Keine Code Blocks')
+        return values.get_or_default(code_blocks, 'Keine Code Blocks')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         code_blocks = self.model.get_nodes(CodeBlockNode)
@@ -405,7 +452,7 @@ class CodeBlocksDocs(AHeadingTextDocs[TDynamo]):
         return lines
 
 
-class PythonNodeDocs(ANodeDocsContent[TDynamo]):
+class PythonNodeDoc(ANodeDocsContent[TDynamoFile]):
 
     def _heading_content(self, **kwargs) -> List[str]:
         node = self._get_node(PythonCodeNode, **kwargs)
@@ -413,31 +460,31 @@ class PythonNodeDocs(ANodeDocsContent[TDynamo]):
         return lines
 
 
-class PythonNodesDocs(AHeadingTextDocs[TDynamo]):
+class PythonNodesDocs(AHeadineDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 node_docs: IDocContent[TDynamo], heading: str) -> None:
-        super().__init__(file, heading)
-        self.node_docs = node_docs
+    def __init__(self, file: IModelDocs[TDynamoFile],
+                 node_doc: IDocContent[TDynamoFile], headline: str) -> None:
+        super().__init__(file=file, headline=headline)
+        self.node_doc = node_doc
 
     def _heading_content(self, **_) -> List[str]:
         python_codes = self.model.get_nodes(PythonCodeNode)
-        return self.values.default_if_empty(python_codes, 'Keine Python Nodes')
+        return self.value_handler.get_or_default(python_codes, 'Keine Python Nodes')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         python_nodes = self.model.get_nodes(PythonCodeNode)
         lines = super()._children_content(level, **kwargs)
         for python_node in python_nodes:
-            content = self._get_doc_content(self.node_docs, level, node=python_node, **kwargs)
+            content = self._get_doc_content(self.node_doc, level, node=python_node, **kwargs)
             lines.extend(content)
         return lines
 
 
-class SourceCodeDocs(AHeadingTextDocs[TDynamo]):
+class SourceCodeDocs(AHeadineDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 children: List[IDocContent[TDynamo]], heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, file: IModelDocs[TDynamoFile],
+                 children: List[IDocContent[TDynamoFile]], headline: str) -> None:
+        super().__init__(file=file, headline=headline)
         self.children = children
 
     def _heading_content(self, **_) -> List[str]:
@@ -451,7 +498,7 @@ class SourceCodeDocs(AHeadingTextDocs[TDynamo]):
         return lines
 
 
-class FileAndDirectoryDocs(ANodeDocsContent[TDynamo]):
+class FileAndDirectoryDocs(ANodeDocsContent[TDynamoFile]):
 
     def _clean_existing_content(self) -> List[str]:
         lines = super()._clean_existing_content()
@@ -470,12 +517,11 @@ class FileAndDirectoryDocs(ANodeDocsContent[TDynamo]):
         return lines
 
 
-class FilesAndDirectoriesDocs(AHeadingTextDocs[TDynamo]):
+class FilesAndDirectoriesDocs(ASectionDoc[TDynamoFile]):
 
-    def __init__(self, file: IModelDocs[TDynamo],
-                 node_docs: IDocContent[TDynamo],
-                 heading: str) -> None:
-        super().__init__(file, heading)
+    def __init__(self, node_docs: IDocContent[TDynamoFile],
+                 section: DocSection, file_docs: DocsNodeRepository[TDynamoFile]) -> None:
+        super().__init__(section=section, file_docs=file_docs)
         self.node_docs = node_docs
 
     def _path_nodes(self) -> List[APathInputNode]:
@@ -486,7 +532,7 @@ class FilesAndDirectoriesDocs(AHeadingTextDocs[TDynamo]):
 
     def _heading_content(self, **_) -> List[str]:
         nodes = self._path_nodes()
-        return self.values.default_if_empty(nodes, 'Keine Pfad-Nodes')
+        return self.value_handler.default_or_empty(nodes, 'Keine Pfad-Nodes')
 
     def _children_content(self, level: int, **kwargs) -> List[str]:
         lines = super()._children_content(level, **kwargs)
