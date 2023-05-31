@@ -2,14 +2,15 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import List, Optional, Sized
 
-from dynamo.docs import content, custom
-from dynamo.docs.content import (ASectionDoc, FileAndDirectoryDocs,
-                                 FilesAndDirectoriesDocs, IDocContent,
-                                 SolutionOrProblemDocs, TutorialDocs)
+from dynamo.docs import custom
 from dynamo.docs.doc_models import ScriptPathDocFile
 from dynamo.docs.docs import IModelDocs
-from dynamo.docs.docs_parser import (DOCS, FILES, INPUT, OUTPUT, SOLUTION,
-                                     DocsNodeFactory, DocsNodeRepository)
+from dynamo.docs.manual.models import DOCS, FILES, INPUT, OUTPUT, SOLUTION
+from dynamo.docs.manual.parser import DocsNodeFactory, DocsNodeRepository
+from dynamo.docs.models.nodes import FileAndDirectoryDocs
+from dynamo.docs.models.sections import (ASectionDoc, FilesAndDirectoriesDocs,
+                                         IDocContent, SolutionOrProblemDocs,
+                                         TutorialDocs)
 from dynamo.models.files import Script
 from dynamo.utils import paths
 

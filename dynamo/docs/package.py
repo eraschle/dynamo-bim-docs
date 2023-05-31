@@ -1,8 +1,8 @@
 from ctypes import ArgumentError
 from typing import List, Tuple
 
-from dynamo.docs import content
-from dynamo.docs.content import AHeadlineDoc, IDocContent
+from dynamo.docs.models import content
+from dynamo.docs.models.content import AHeadlineDoc, IDocContent
 from dynamo.docs.doc_models import CustomNodeDocFile
 from dynamo.docs.docs import IDocsFile, IModelDocs
 from dynamo.models.files import Package

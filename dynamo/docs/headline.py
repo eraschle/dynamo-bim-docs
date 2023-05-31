@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Dict, Generic, Iterable, List, Optional, TypeVar
 
-from dynamo.docs.content import AHeadlineDoc, IDocContent, TFile
+from dynamo.docs.models.content import AHeadlineDoc, IDocContent, TFile
 from dynamo.docs.docs import IExporter, IModelDocs
 from dynamo.models.model import IAnnotation, IDynamoFile, IGroup, IModelWithId, INode
 from dynamo.utils import geom

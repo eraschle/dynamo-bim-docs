@@ -1,12 +1,8 @@
-from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Dict, Generic, Iterable, List, Optional, TypeVar
+from typing import Dict, Generic, List, Optional, TypeVar
 
-from dynamo.docs.content import  IDocContent, TFile
+from dynamo.docs.models.content import  IDocContent
 from dynamo.docs.docs import IModelDocs
-from dynamo.models.model import (IAnnotation, IDynamoFile, IGroup,
-                                 IModelWithId)
-from dynamo.utils import geom
+from dynamo.models.model import (IAnnotation, IDynamoFile, IModelWithId)
 
 from .models import AnnotationDocs, DocsParser, GroupsDocs, DocSection, SectionDocs
 
