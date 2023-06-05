@@ -9,12 +9,14 @@ class IBaseModel(Protocol):
     name: str
 
 
+@runtime_checkable
 class IModelWithId(IBaseModel, Protocol):
     node_id: str
     x: float
     y: float
 
 
+@runtime_checkable
 class ICodeNode(IModelWithId, Protocol):
     code: str
 
@@ -35,12 +37,12 @@ class IModelWithNodes(Protocol[TNode]):
 
 @runtime_checkable
 class IAnnotation(IModelWithId, Protocol):
-    description: str
     group: Optional['IGroup']
 
 
 @runtime_checkable
 class IGroup(IAnnotation, IModelWithNodes[IModelWithId],  Protocol):
+    description: str
     color: str
 
 
@@ -56,10 +58,13 @@ class IPackage(IBaseModel, Protocol):
         ...
 
 
+@runtime_checkable
 class INode(IModelWithId, Protocol):
     description: str
     disabled: bool
     show_geometry: bool
+    is_input: bool
+    is_output: bool
     group: Optional['IGroup']
 
 

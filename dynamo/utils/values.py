@@ -28,23 +28,23 @@ class ValueHandler(IValueHandler):
     def _get_default(self, default: Optional[str]) -> str:
         return self.default_value if default is None else default
 
-    def as_str(self, value: Any, default: Optional[str] = None) -> str:
-        if checks.is_blank(value):
-            return self._get_default(default)
+    def _as_str(self, value: Any) -> str:
+        if value is None:
+            value = ''
         return (value if isinstance(value, str) else str(value)).strip()
+
+    def as_str(self, value: Any, default: Optional[str] = None) -> str:
+        str_value = self._as_str(value)
+        if checks.is_blank(str_value):
+            return self._get_default(default)
+        return str_value
 
     def as_list(self, value: Any, default: Optional[str] = None) -> List[str]:
         if isinstance(value, list):
             if len(value) == 0:
                 return [self._get_default(default)]
-            return [self.as_str(val, default) for val in value]
+            return [self._as_str(val) for val in value]
         return [self.as_str(value, default)]
-
-    def list_or_default(self, values: List[Any], default: Optional[str] = None) -> List[str]:
-        val_or_default = []
-        for value in values:
-            val_or_default.extend(self.as_str(value, default))
-        return val_or_default
 
     def default_if_empty(self, values: Optional[List[Any]], default: Optional[str] = None) -> List[str]:
         if checks.is_blank(values):

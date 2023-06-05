@@ -2,7 +2,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from dynamo.docs.manual.models import INFO, DocsParser
+from dynamo.docs.manual.models import DESCRIPTION, DocsParser
 from dynamo.models.model import IGroup
 from dynamo.utils.values import ValueHandler
 
@@ -31,37 +31,37 @@ def _section_node(section: str, valid: bool, with_number: bool = False) -> Annot
 
 
 def test_parser_has_section():
-    node = _section_node(INFO.parse_value, valid=True)
+    node = _section_node(DESCRIPTION.parse_value, valid=True)
     parser = DocsParser(node)
     assert parser.has_section()
 
 
 def test_parser_has_NOT_section():
-    node = _section_node(INFO.parse_value, valid=False)
+    node = _section_node(DESCRIPTION.parse_value, valid=False)
     parser = DocsParser(node)
     assert not parser.has_section()
 
 
 def test_parser_with_number():
-    node = _section_node(INFO.parse_value, valid=True, with_number=True)
+    node = _section_node(DESCRIPTION.parse_value, valid=True, with_number=True)
     parser = DocsParser(node)
     assert isinstance(parser.number(), float)
 
 
 def test_parser_without_number():
-    node = _section_node(INFO.parse_value, valid=True, with_number=False)
+    node = _section_node(DESCRIPTION.parse_value, valid=True, with_number=False)
     parser = DocsParser(node)
     assert parser.number() is None
 
 
 def test_parser_title():
-    node = _section_node(INFO.parse_value, valid=True)
+    node = _section_node(DESCRIPTION.parse_value, valid=True)
     parser = DocsParser(node)
     assert parser.title() == _TITLE
 
 
 def test_parser_content():
-    node = _section_node(INFO.parse_value, valid=True)
+    node = _section_node(DESCRIPTION.parse_value, valid=True)
     parser = DocsParser(node)
     handler = ValueHandler()
     assert len(parser.content(handler)) == len(_CONTENT)

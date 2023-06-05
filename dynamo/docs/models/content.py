@@ -1,9 +1,10 @@
 from abc import abstractmethod
-from ctypes import ArgumentError
-from typing import Any, List, Protocol, Type, TypeVar
+from pickle import TRUE
+from typing import Callable, List, Optional, Protocol, Type, TypeVar
 
 from dynamo.docs.docs import IDocsManager, IExporter, IModelDocs, IValueHandler
 from dynamo.models.model import IBaseModel, IFileModel
+from dynamo.utils import checks
 
 TFile = TypeVar('TFile', bound=IFileModel)
 
@@ -26,10 +27,17 @@ class IDocContent(Protocol[TFile]):
     def content(self, level: int, **kwargs) -> List[str]:
         ...
 
+    def has_content(self, **kwargs) -> bool:
+        ...
+
+
+TArg = TypeVar('TArg')
+
 
 class ADocContent(IDocContent[TFile]):
-    def __init__(self, file: IModelDocs[TFile]) -> None:
+    def __init__(self, file: IModelDocs[TFile], children: List[IDocContent[TFile]]) -> None:
         self.file = file
+        self.children = children
 
     @property
     def manager(self) -> IDocsManager:
@@ -56,28 +64,58 @@ class ADocContent(IDocContent[TFile]):
     def model(self) -> TFile:
         return self.file.model
 
+    def _get_args(self, arg_name: str, default: Optional[TArg], **kwargs) -> TArg:
+        value = kwargs.get(arg_name, default)
+        if value is None or value == default:
+            raise ValueError(f'Argument "{arg_name}" is None or does not exists')
+        return value
+
+    def _get_lines(self, content_cb: Callable[..., List[str]], strip_cb: Optional[Callable[[List[str]], List[str]]] = None, **kwargs) -> List[str]:
+        content = content_cb(**kwargs)
+        if strip_cb is None:
+            strip_cb = self._strip_empty
+        content = strip_cb(content)
+        return content
+
+    def has_content(self, **kwargs) -> bool:
+        return True
+
+    def _is_content(self, content: List[str]) -> bool:
+        if len(content) == 1:
+            return checks.is_not_blank(content[0])
+        return not all(checks.is_blank(line, strip=True) for line in content)
+
     def content(self, level: int, **kwargs) -> List[str]:
         lines = []
-        lines.extend(self.exporter.empty_line())
-        content = self._content(level, **kwargs)
-        lines.extend(self._strip_empty(content))
+        if self.has_content(**kwargs):
+            lines.extend(self.exporter.empty_line())
+            lines.extend(self._get_lines(self._content, level=level, **kwargs))
 
-        lines.extend(self.exporter.empty_line())
-        children = self._children_content(level + 1, **kwargs)
-        lines.extend(self._strip_empty(children))
+        if self._has_child_content(**kwargs):
+            child_content = self._get_lines(self._child_content, level=level + 1, **kwargs)
+            if self._is_content(child_content):
+                lines.extend(self.exporter.empty_line())
+                lines.extend(child_content)
         return lines
 
     @abstractmethod
     def _content(self, level: int, **kwargs) -> List[str]:
         pass
 
-    def _get_content(self, child: IDocContent[Any], level: int, **kwargs) -> List[str]:
-        content = child.content(level, **kwargs)
-        content = self._rstrip_empty(content)
-        return content
+    def _has_child_content(self, **kwargs) -> bool:
+        if len(self.children) == 0:
+            return False
+        return any(child.has_content(**kwargs) for child in self.children)
 
-    def _children_content(self, level: int, **kwargs) -> List[str]:
-        return []
+    def _child_content(self, level: int, **kwargs) -> List[str]:
+        lines = []
+        for child in self.children:
+            child_content = self._get_lines(child.content, level=level, **kwargs)
+            if not self._is_content(child_content):
+                continue
+            lines.extend(self.exporter.empty_line())
+            lines.extend(child_content)
+        return lines
 
 
 TNode = TypeVar('TNode', bound=IBaseModel)
@@ -85,36 +123,30 @@ TNode = TypeVar('TNode', bound=IBaseModel)
 
 class AHeadlineContent(ADocContent[TFile]):
 
-    def __init__(self, file: IModelDocs[TFile]) -> None:
-        super().__init__(file)
+    def __init__(self, file: IModelDocs[TFile], children: List[IDocContent[TFile]]) -> None:
+        super().__init__(file, children)
         self._existing_content: List[str] = []
 
     def _get_node(self, node_type: Type[TNode], **kwargs) -> TNode:
-        arg = 'node'
-        node = kwargs.get(arg, None)
-        if node is None:
-            raise ArgumentError(f'Argument "{arg}" is None or does not exists')
+        arg_name = 'node'
+        node = self._get_args(arg_name, None, **kwargs)
         if not isinstance(node, node_type):
-            raise ArgumentError(f'Except "{node_type}" but got {type(node)}')
+            raise ValueError(f'Except "{node_type}" but got {type(node)}')
         return node
 
     def _get_level(self, **kwargs) -> int:
-        arg = 'level'
-        node = kwargs.get(arg, 0)
-        if node < 1:
-            raise ArgumentError(f'Argument "{arg}" is None or does not exists')
-        return node
+        arg_name = 'level'
+        return self._get_args(arg_name, -1, **kwargs)
 
     def _content(self, level: int, **kwargs) -> List[str]:
         lines = []
-        heading = self._headline(level, **kwargs)
+        heading = self._get_lines(self._headline, level=level, **kwargs)
         self._set_existing_content(heading)
         lines.extend(heading)
-
-        lines.extend(self.exporter.empty_line())
-        content = self._headline_content(level=level, **kwargs)
-        lines.extend(self._strip_empty(content))
-        lines = self._rstrip_empty(lines)
+        content = self._get_lines(self._headline_content, level=level, **kwargs)
+        if self._is_content(content):
+            lines.extend(self.exporter.empty_line())
+            lines.extend(content)
         return lines
 
     @abstractmethod
@@ -148,26 +180,15 @@ class AHeadlineContent(ADocContent[TFile]):
         lines = self.value_handler.remove_default_doc(lines)
         return lines
 
-    def _manual_docs(self) -> List[str]:
-        values = self.value_handler
+    def _manual_docs(self, default_value: str) -> List[str]:
         existing = self._clean_existing_content()
         existing = self._strip_empty(existing)
-        return values.as_list(existing, values.default_docs)
-
-
-class AHeadlineDoc(AHeadlineContent[TFile]):
-
-    def __init__(self, file: IModelDocs[TFile], headline: str) -> None:
-        super().__init__(file)
-        self.headline = headline
-
-    def _headline(self, level: int, **_) -> List[str]:
-        return self.exporter.heading(self.headline, level)
+        return self.value_handler.as_list(existing, default_value)
 
 
 class TitleDocContent(ADocContent[TFile]):
 
-    def _content(self, _: int) -> List[str]:
+    def _content(self, **kwargs) -> List[str]:
         lines = []
         lines.extend(self.exporter.doc_head())
         lines.extend(self.exporter.empty_line())
@@ -176,4 +197,4 @@ class TitleDocContent(ADocContent[TFile]):
 
 
 def title_docs(file: IModelDocs[TFile]) -> IDocContent[TFile]:
-    return TitleDocContent(file)
+    return TitleDocContent(file, children=[])

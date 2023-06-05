@@ -3,7 +3,7 @@ from typing import Any, Collection, List, Optional, TypeGuard, TypeVar, Union
 TValue = TypeVar('TValue', bound=Any | Collection[Any])
 
 
-def is_none_or_empty(value: Optional[TValue], strip: bool = False) -> TypeGuard[TValue]:
+def is_none_or_empty(value: Optional[TValue], strip: bool = False) -> TypeGuard[Optional[TValue]]:
     if value is None:
         return True
     if isinstance(value, list):
@@ -13,7 +13,7 @@ def is_none_or_empty(value: Optional[TValue], strip: bool = False) -> TypeGuard[
     return len(str_value) == 0
 
 
-def is_blank(value: Optional[TValue], strip: bool = False) -> TypeGuard[TValue]:
+def is_blank(value: Optional[TValue], strip: bool = False) -> TypeGuard[Optional[TValue]]:
     return is_none_or_empty(value, strip)
 
 

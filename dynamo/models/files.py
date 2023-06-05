@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional, Type
 
-from dynamo.models.nodes import CustomNode, PackageDependency
+from dynamo.models.nodes import CustomNode, InputOutputNode, PackageDependency
 
 from . import model
 from .model import (IAnnotation, IBaseModel, ICustomNode, IDependency,
@@ -15,8 +15,8 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class AFileBaseModel(IBaseModel):
-    path: Path = field(compare=False, repr=False)
-    name: str = field(repr=True, compare=False)
+    path: Path = field(compare=True, repr=False)
+    name: str = field(compare=False, repr=True)
     description: str = field(compare=False, repr=False)
 
 
@@ -44,8 +44,7 @@ def _nodes_by_ids(node_ids: Iterable[str], nodes: Iterable[TNode]) -> List[TNode
 
 @dataclass
 class ADynamoFileNode(AFileBaseModel, IDynamoFile[DynamoInfo]):
-    uuid: str = field(compare=True, repr=True)
-    name: str = field(compare=True, repr=True)
+    uuid: str = field(compare=False, repr=True)
     info: DynamoInfo = field(compare=False, repr=False)
     nodes: List[INode] = field(compare=False, repr=False)
     groups: List[IGroup] = field(compare=False, repr=False)
@@ -96,9 +95,26 @@ class ADynamoFileNode(AFileBaseModel, IDynamoFile[DynamoInfo]):
         return sorted(nodes, key=lambda node: (node.name, node.node_id))
 
 
-@ dataclass
+@dataclass
 class Script(ADynamoFileNode):
-    pass
+    inputs: List[InputOutputNode] = field(compare=False, repr=False)
+    outputs: List[InputOutputNode] = field(compare=False, repr=False)
+
+    def input_nodes(self) -> List[INode]:
+        nodes = [node for node in self.nodes if node.is_input]
+        for node in self.inputs:
+            if node in nodes:
+                continue
+            nodes.append(node)
+        return nodes
+
+    def output_nodes(self) -> List[INode]:
+        nodes = [node for node in self.nodes if node.is_output]
+        for node in self.outputs:
+            if node in nodes:
+                continue
+            nodes.append(node)
+        return nodes
 
 
 def default_package_info() -> 'PackageInfo':

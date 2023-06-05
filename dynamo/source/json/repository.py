@@ -21,7 +21,10 @@ class JsonFileRepository(ISourceRepository[Dict[str, Any]]):
         self.content = self.file_handler.read(path)
         self.file_path = path
 
-    def ger_value(self, key: str, default: Any) -> Any:
+    def write(self, path: Path, content: Dict[str, Any]):
+        self.file_handler.write(path, content)
+
+    def get_value(self, key: str, default: Any) -> Any:
         return self.content.get(key, default)
 
     def _node_id(self, content: Dict[str, Any]) -> str:
@@ -58,6 +61,12 @@ class JsonFileRepository(ISourceRepository[Dict[str, Any]]):
                 continue
             filtered.append(content)
         return filtered
+
+    def inputs(self) -> List[Dict[str, Any]]:
+        return self._get_content(['Inputs'])
+
+    def outputs(self) -> List[Dict[str, Any]]:
+        return self._get_content(['Outputs'])
 
     def _get_annotations(self) -> List[Dict[str, Any]]:
         return self._get_content(['View', 'Annotations'])

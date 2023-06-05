@@ -2,7 +2,8 @@ from typing import Any, Iterable, List, Optional, Tuple
 
 from dynamo.docs.docs import IDocsFile, IExporter, IValueHandler
 from dynamo.io.file import OrgHandler
-from dynamo.utils import paths, string
+from dynamo.models.model import INode
+from dynamo.utils import checks, paths, string
 from dynamo.utils.values import ValueHandler
 
 
@@ -28,6 +29,8 @@ class OrgLinkCreator:
             protocol = f'{protocol}:'
             if not link.startswith(protocol):
                 continue
+            return link
+        if checks.is_blank(default_protocol):
             return link
         return f'{default_protocol}:{link}'
 
@@ -161,6 +164,9 @@ class OrgExporter(IExporter):
     def file_link(self, file: IDocsFile, relative_to: IDocsFile) -> str:
         relative = paths.relative_to(file.doc_path, relative_to.doc_path)
         return self.link_handler.create(relative, file.display_name, 'file')
+
+    def heading_link(self, to_node: INode) -> str:
+        return self.link_handler.create(to_node.name, to_node.name, '')
 
     def link_indexes(self, lines: List[str]) -> List[Tuple[int, str, Optional[str]]]:
         indexes = []

@@ -4,11 +4,15 @@ from typing import List, Tuple
 from dynamo.docs.doc_models import CustomNodeDocFile
 from dynamo.docs.docs import IDocsFile, IModelDocs
 from dynamo.docs.models import content
-from dynamo.docs.models.content import AHeadlineDoc, IDocContent
+from dynamo.docs.models.content import IDocContent
+from dynamo.docs.models.headlines import AHeadlineDoc
 from dynamo.models.files import Package
 
 
 class PackageContentDocs(AHeadlineDoc[Package]):
+
+    def has_content(self, **kwargs) -> bool:
+        return super().has_content(**kwargs)
 
     def _headline_content(self, **_) -> List[str]:
         return self.value_handler.as_list(self.model.info.contents, 'Keine Inhalt')
@@ -22,27 +26,16 @@ class PackageDescriptionDocs(AHeadlineDoc[Package]):
 
 class PackageInformationDocs(AHeadlineDoc[Package]):
 
-    def __init__(self, file: IModelDocs[Package],
-                 children: List[IDocContent[Package]],
-                 headline: str) -> None:
-        super().__init__(file, headline)
-        self.children = children
-
     def _headline_content(self, **_) -> List[str]:
+        info = self.model.info
+        default_value = 'Keine Angaben'
         lines = [
-            ['Version', *self.value_handler.as_str(self.model.info.version)],
-            ['Engine', *self.value_handler.as_str(self.model.info.engine_version)],
-            ['Homepage', *self.value_handler.as_str(self.model.info.site_url)],
-            ['Repository', *self.value_handler.as_str(self.model.info.repository_url)]
+            ['Version', self.value_handler.as_str(info.version, default_value)],
+            ['Dynamo-Engine', self.value_handler.as_str(info.engine_version, default_value)],
+            ['Homepage', self.value_handler.as_str(info.site_url, default_value)],
+            ['Repository', self.value_handler.as_str(info.repository_url, default_value)]
         ]
         return self.exporter.as_table(None, lines)
-
-    def _children_content(self, level: int, **kwargs) -> List[str]:
-        lines = super()._children_content(level, **kwargs)
-        for child in self.children:
-            content = self._get_content(child, level, **kwargs)
-            lines.extend(content)
-        return lines
 
 
 class PackageCustomNodeDocs(AHeadlineDoc[Package]):
@@ -71,12 +64,6 @@ class PackageCustomNodeDocs(AHeadlineDoc[Package]):
 
 class PackageNodesDocs(AHeadlineDoc[Package]):
 
-    def __init__(self, file: IModelDocs[Package],
-                 docs: IDocContent[Package],
-                 headline: str) -> None:
-        super().__init__(file, headline)
-        self.docs = docs
-
     def _categories(self) -> List[str]:
         cats = set([node.category for node in self.model.nodes])
         return sorted(cats)
@@ -85,10 +72,13 @@ class PackageNodesDocs(AHeadlineDoc[Package]):
         nodes = self._categories()
         return self.value_handler.default_if_empty(nodes, 'Keine Kategorien')
 
-    def _children_content(self, level: int, **kwargs) -> List[str]:
-        lines = super()._children_content(level, **kwargs)
+    def _child_doc(self, **kwargs) -> List[str]:
+        return self.children[0].content(**kwargs)
+
+    def _child_content(self, level: int, **kwargs) -> List[str]:
+        lines = []
         for cat in self._categories():
-            content = self._get_content(self.docs, level, category=cat, **kwargs)
+            content = self._get_lines(self._child_doc, level=level, category=cat, **kwargs)
             lines.extend(content)
         return lines
 
@@ -100,17 +90,16 @@ def packages_content(file: IModelDocs[Package]) -> List[IDocContent[Package]]:
             file=file,
             children=[
                 PackageDescriptionDocs(
-                    file=file, headline='Beschreibung'
+                    file=file, headline='Beschreibung', children=[]
                 ),
                 PackageContentDocs(
-                    file=file, headline='Inhalt'
+                    file=file, headline='Inhalt', children=[]
                 )
             ],
             headline='Informationen'),
         PackageNodesDocs(
-            file=file,
-            docs=PackageCustomNodeDocs(file=file, headline=''),
-            headline='Node Dokumentationen')
+            file=file, headline='Node Dokumentationen',
+            children=[PackageCustomNodeDocs(file=file, children=[], headline='')])
     ]
 
 

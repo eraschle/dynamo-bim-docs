@@ -23,9 +23,9 @@ def json_gateway(manager: IDynamoManager) -> INodeGateway:
 
 def get_packages(manager: IDynamoManager) -> Iterable[Package]:
     gateway = json_gateway(manager)
-    return gateway.packages([manager.package_src_path])
+    return gateway.read_packages([manager.package_src_path])
 
 
 def get_scripts(manager: IDynamoManager) -> Iterable[Script]:
     gateway = json_gateway(manager)
-    return gateway.scripts([manager.script_src_path])
+    return gateway.read_scripts([manager.script_src_path])

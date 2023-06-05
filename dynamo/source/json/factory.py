@@ -10,36 +10,36 @@ from dynamo.source.json.repository import JsonFileRepository
 
 class JsonDynamoFactory(IDynamoFactory):
     def __init__(self, script: ScriptFileBuilder, custom_node: CustomNodeFileBuilder,
-                 package: PackageFileBuilder, json_repo: JsonFileRepository) -> None:
+                 package: PackageFileBuilder, repository: JsonFileRepository) -> None:
         self.script_builder = script
         self.custom_node_builder = custom_node
         self.package_builder = package
-        self.json_repo = json_repo
+        self.repository = repository
 
     def can_create(self, path: Path) -> bool:
         try:
-            return self.json_repo.can_read(path)
+            return self.repository.can_read(path)
         except FileNotFoundError:
             return True
 
     def script(self, path: Path) -> Script:
-        self.json_repo.read(path)
-        if not self.script_builder.can_build(self.json_repo):
+        self.repository.read(path)
+        if not self.script_builder.can_build(self.repository):
             raise ValueError(f'Script [{path.name}] can not be created')
-        script = self.script_builder.build(self.json_repo)
+        script = self.script_builder.build(self.repository)
         script.update_nodes()
         return script
 
     def package(self, path: Path) -> Package:
-        self.json_repo.read(path)
-        if not self.package_builder.can_build(self.json_repo):
+        self.repository.read(path)
+        if not self.package_builder.can_build(self.repository):
             raise ValueError(f'Package [{path.name}] can not be created')
-        return self.package_builder.build(self.json_repo)
+        return self.package_builder.build(self.repository)
 
     def custom_node(self, path: Path) -> CustomFileNode:
-        self.json_repo.read(path)
-        if not self.custom_node_builder.can_build(self.json_repo):
+        self.repository.read(path)
+        if not self.custom_node_builder.can_build(self.repository):
             raise ValueError(f'Python Custom node [{path.name}] can not be created')
-        custom_node = self.custom_node_builder.build(self.json_repo)
+        custom_node = self.custom_node_builder.build(self.repository)
         custom_node.update_nodes()
         return custom_node

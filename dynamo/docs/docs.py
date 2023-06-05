@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Protocol, Tuple, TypeVar
 
 from dynamo.io.file import IoHandler
-from dynamo.models.model import ICustomNode, IFileModel
+from dynamo.models.model import ICustomNode, IFileModel, INode
 
 
 class IDocsFile(Protocol):
@@ -100,6 +100,9 @@ class IExporter(Protocol):
         ...
 
     def file_link(self, file: IDocsFile, relative_to: IDocsFile) -> str:
+        ...
+
+    def heading_link(self, to_node: INode) -> str:
         ...
 
     def link_indexes(self, lines: List[str]) -> List[Tuple[int, str, Optional[str]]]:

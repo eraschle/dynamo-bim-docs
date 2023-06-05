@@ -1,70 +1,63 @@
-from typing import Dict, Generic, List, Optional, TypeVar
+from typing import Generic, List, Tuple, TypeVar
 
-from dynamo.docs.docs import IModelDocs
-from dynamo.docs.models.content import IDocContent
-from dynamo.models.model import IAnnotation, IDynamoFile, IModelWithId
+from dynamo.models.model import IAnnotation, IGroup
 
-from .models import (AnnotationDocs, DocSection, DocsParser, GroupsDocs,
-                     SectionDocs)
-
-TDynamoFile = TypeVar('TDynamoFile', bound=IDynamoFile)
+from .sections import GROUP, DocSection, all_doc_sections
 
 
-class DocsNodeFactory:
+def _get_doc_heading(line: str) -> DocSection:
+    line = line.strip()
+    for section in all_doc_sections():
+        if not section.is_section(line):
+            continue
+        return section
+    return DocSection.unknown()
 
-    def _docs_parser(self, node: IAnnotation) -> Optional[DocsParser]:
-        parser = DocsParser(node)
-        if not parser.has_section():
-            return None
-        return parser
 
-    def group_docs(self, file: IModelDocs[TDynamoFile]) -> List[GroupsDocs]:
-        doc_models = []
-        for group_node in file.model.groups:
-            parser = self._docs_parser(group_node)
-            if parser is None:
+TParserNode = TypeVar('TParserNode', bound=IAnnotation)
+
+
+class DocsParser(Generic[TParserNode]):
+
+    def __init__(self, node: TParserNode) -> None:
+        self.node = node
+        self.section, self._lines = self._parse(node)
+
+    def _get_lines(self, node: TParserNode) -> List[str]:
+        desc = '' if node.name is None else node.name
+        return desc.splitlines(keepends=False)
+
+    def _parse(self, node: TParserNode) -> Tuple[DocSection, List[str]]:
+        lines = self._get_lines(node)
+        for idx, line in enumerate(lines):
+            section = _get_doc_heading(line)
+            if DocSection.is_unknown(section):
                 continue
-            doc_model = GroupsDocs(file, parser)
-            doc_models.append(doc_model)
-        return doc_models
+            lines = lines[idx:]
+            lines[0] = section.clean_value(line)
+            return section, lines
+        return DocSection.unknown(), []
 
-    def annotation_docs(self, file: IModelDocs[TDynamoFile]) -> List[AnnotationDocs]:
-        doc_models = []
-        for group_node in file.model.annotations:
-            parser = self._docs_parser(group_node)
-            if parser is None:
-                continue
-            doc_model = AnnotationDocs(file, parser)
-            doc_models.append(doc_model)
-        return doc_models
+    def has_section(self) -> bool:
+        return not DocSection.is_unknown(self.section)
+
+    def content(self, **kwargs) -> List[str]:
+        return self._lines
 
 
-class DocsNodeRepository(Generic[TDynamoFile]):
-    def __init__(self, file: IModelDocs[TDynamoFile], factory: DocsNodeFactory) -> None:
-        self.file = file
-        self._groups: Dict[DocSection, List[SectionDocs[IDynamoFile]]] = {}
-        self._add_group_docs(factory)
-        self._annotations: List[AnnotationDocs[IDynamoFile]] = []
-        self._add_annotation_docs(factory)
+class AnnotationDocsParser(DocsParser[IAnnotation]):
 
-    def _add_group_docs(self, factory: DocsNodeFactory) -> None:
-        for content in factory.group_docs(self.file):
-            section = content.section
-            if section not in self._groups:
-                self._groups[section] = []
-            self._groups[section].append(content)
+    def content(self, **kwargs) -> List[str]:
+        return self._lines
 
-    def _add_annotation_docs(self, factory: DocsNodeFactory) -> None:
-        for content in factory.annotation_docs(self.file):
-            self._annotations.append(content)
 
-    def section_doc(self, section: DocSection) -> List[SectionDocs[IDynamoFile]]:
-        return self._groups.get(section, [])
+class GroupAnnotationParser(DocsParser[IAnnotation]):
 
-    def node_docs(self, model: IModelWithId) -> Optional[IDocContent[IDynamoFile]]:
-        for doc in self._annotations:
-            node_doc = doc.linked_node()
-            if model.node_id != node_doc.node_id:
-                continue
-            return doc
-        return None
+    def _parse(self, node: IAnnotation) -> Tuple[DocSection, List[str]]:
+        return GROUP, self._get_lines(node)
+
+
+class GroupDocsParser(DocsParser[IGroup]):
+
+    def content(self, **kwargs) -> List[str]:
+        return self._lines
