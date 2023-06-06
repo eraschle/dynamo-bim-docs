@@ -40,15 +40,15 @@ class AFileBuilder(ABC, IBuilder[TFileModel, ISourceRepository[Dict[str, Any]]])
     def _get_value(self, attr: str, value: Any) -> Any:
         return value
 
-    def can_build(self, repo: ISourceRepository[Dict[str, Any]]) -> bool:
-        return all(attr in repo.content for (attr, _) in self.attr_src_map().values())
+    def can_build(self, content: ISourceRepository[Dict[str, Any]], **kwargs) -> bool:
+        return all(attr in content.content for (attr, _) in self.attr_src_map().values())
 
     @abstractmethod
     def get_builder_attributes(self, repo: ISourceRepository[Dict[str, Any]]) -> Dict[str, Any]:
         pass
 
-    def build(self, repo: ISourceRepository[Dict[str, Any]]) -> TFileModel:
-        attributes = self.get_attributes(repo)
+    def build(self, content: ISourceRepository[Dict[str, Any]], **kwargs) -> TFileModel:
+        attributes = self.get_attributes(content)
         return self.node_type(**attributes)
 
 
@@ -100,20 +100,21 @@ class ADynamoFileBuilder(AFileBuilder[TDynamoFile], IFileBuilder[TDynamoFile, IS
         for attr, builder in self.builder_map().items():
             models = self._build_nodes(repo, builder)
             if attr == 'info':
-                models = None if len(models) == 0 else models[0]
+                models = None if len(
+                    models) == 0 else models[0]  # type: ignore
             attr_values[attr] = models
         return attr_values
 
-    def _change_attr(self, node: TDynamoFile, repo: ISourceRepository[Dict[str, Any]], attr_name: str, new_value: str) -> TDynamoFile:
-        repo.read(node.path)
+    def _change_attr(self, node: TDynamoFile, content: ISourceRepository[Dict[str, Any]], attr_name: str, new_value: str) -> TDynamoFile:
+        content.read(node.path)
         key, _ = self.attr_src_map()[attr_name]
-        repo.content[key] = new_value
-        repo.write(node.path, repo.content)
+        content.content[key] = new_value
+        content.write(node.path, content.content)
         setattr(node, attr_name, new_value)
         return node
 
-    def change_name(self, node: TDynamoFile, repo: ISourceRepository[Dict[str, Any]], new_name: str) -> TDynamoFile:
-        return self._change_attr(node, repo, 'name', new_name)
+    def change_name(self, node: TDynamoFile, content: ISourceRepository[Dict[str, Any]], new_name: str) -> TDynamoFile:
+        return self._change_attr(node, content, 'name', new_name)
 
     def change_uuid(self, node: TDynamoFile, repo: ISourceRepository[Dict[str, Any]], new_uuid: str) -> TDynamoFile:
         return self._change_attr(node, repo, 'uuid', new_uuid)

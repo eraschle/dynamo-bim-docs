@@ -26,7 +26,9 @@ class ASectionDoc(AHeadlineContent[TDynamoFile]):
         lines = []
         if node_docs is not None:
             for docs in node_docs.children:
-                content = self._get_lines(docs.content, self._strip_empty, level=level, **kwargs)
+                content = self._get_lines(
+                    docs.content, self._strip_empty, level=level, **kwargs
+                )
                 if not self._is_content(content):
                     continue
                 lines.extend(self.exporter.empty_line())
@@ -98,14 +100,17 @@ class AFileDescriptionDocs(ASectionDoc[TDynamoFile]):
                  children: List[IDocContent[TDynamoFile]]) -> None:
         super().__init__(DESCRIPTION, file_docs, children)
 
-    def _common_informations(self) -> List[List[str]]:
+    def _common_information(self) -> List[List[str]]:
         return [
             ['UUID', self.value_handler.as_str(self.model.uuid)],
-            ['Dynamo-Version', self.value_handler.as_str(self.model.info.version)],
+            [
+                'Dynamo-Version',
+                self.value_handler.as_str(self.model.info.version)
+            ],
         ]
 
     def _information_table(self) -> List[str]:
-        return self.exporter.as_table(None, self._common_informations())
+        return self.exporter.as_table(None, self._common_information())
 
     def _section_content(self, **kwargs) -> List[str]:
         lines = self._information_table()
@@ -139,7 +144,8 @@ class NodeWarningDocs(ANodeDocsContent[TDynamoFile]):
 class NodeWarningSectionDocs(ASectionDoc[TDynamoFile]):
 
     def __init__(self, file_docs: DocsNodeRepository[TDynamoFile]) -> None:
-        super().__init__(WARNINGS, file_docs, children=[NodeWarningDocs(file_docs)])
+        super().__init__(WARNINGS, file_docs,
+                         children=[NodeWarningDocs(file_docs)])
 
     def _warning_nodes(self) -> List[IModelWithId]:
         return self.file_docs.warning_nodes()
@@ -156,7 +162,8 @@ class NodeWarningSectionDocs(ASectionDoc[TDynamoFile]):
     def _child_content(self, level: int, **kwargs) -> List[str]:
         lines = []
         for external in self._warning_nodes():
-            content = self._get_lines(self._child_docs, level=level, node=external, **kwargs)
+            content = self._get_lines(
+                self._child_docs, level=level, node=external, **kwargs)
             lines.extend(content)
         return lines
 

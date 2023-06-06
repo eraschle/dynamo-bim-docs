@@ -39,7 +39,9 @@ class ABuilder(IBuilder[TModel, Dict[str, Any]]):
         return self.node_type(**attributes)
 
 
-TNode = TypeVar('TNode', bound=ABaseModel | Annotation | DynamoInfo | PackageInfo)
+TNode = TypeVar(
+    'TNode', bound=ABaseModel | Annotation | DynamoInfo | PackageInfo
+)
 
 
 class NodeBuilder(ABuilder[TNode]):
@@ -49,7 +51,7 @@ class NodeBuilder(ABuilder[TNode]):
             value = content.get(src_attr, None)
             if isinstance(src_value, str) and value == src_value:
                 continue
-            if isinstance(src_value, Callable) and src_value(value):
+            if not isinstance(src_value, str) and src_value(value):
                 continue
             return False
         return True
@@ -276,7 +278,7 @@ def output_node_builder() -> IBuilder:
 
 
 def _package_dependency_builder() -> NodeBuilder:
-    attr_map = {
+    attr_map: Dict[str, Tuple[str, Any]] = {
         'name': ('Name', None),
         'version': ('Version', None),
         'node_ids': ('Nodes', []),
@@ -285,7 +287,7 @@ def _package_dependency_builder() -> NodeBuilder:
 
 
 def _external_dependency_builder() -> NodeBuilder:
-    attr_map = {
+    attr_map: Dict[str, Tuple[str, Any]] = {
         'name': ('Name', None),
         'node_ids': ('Nodes', []),
     }
@@ -330,7 +332,7 @@ class AnnotationBuilder(NodeBuilder[Annotation]):
 
 
 def annotation_node_builder() -> NodeBuilder:
-    attr_map = {
+    attr_map: Dict[str, Tuple[str, Any]] = {
         'node_id': ('Id', None),
         'name': ('Title', None),
         'x': ('Left', None),
@@ -349,7 +351,7 @@ class GroupBuilder(NodeBuilder[Group]):
 
 
 def group_node_builder() -> NodeBuilder:
-    attr_map = {
+    attr_map: Dict[str, Tuple[str, Any]] = {
         'node_id': ('Id', None),
         'name': ('Title', None),
         'description': ('DescriptionText', ''),
@@ -362,7 +364,7 @@ def group_node_builder() -> NodeBuilder:
 
 
 def dynamo_info_builder() -> NodeBuilder:
-    attr_map = {
+    attr_map: Dict[str, Tuple[str, Any]] = {
         'scale_factor': ('ScaleFactor', DynamoNode),
         'has_run_without_crash': ('HasRunWithoutCrash', DynamoNode),
         'is_visible_in_library': ('IsVisibleInDynamoLibrary', DynamoNode),
@@ -373,7 +375,7 @@ def dynamo_info_builder() -> NodeBuilder:
 
 
 def package_info_builder() -> NodeBuilder:
-    attr_map = {
+    attr_map: Dict[str, Tuple[str, Any]] = {
         'version': ('version', DynamoNode),
         'license': ('license', DynamoNode),
         'group': ('group', DynamoNode),

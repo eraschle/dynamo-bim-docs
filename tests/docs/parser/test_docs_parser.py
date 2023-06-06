@@ -2,9 +2,9 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-from dynamo.docs.manual.models import DESCRIPTION, DocsParser
+from dynamo.docs.manual.models import DocsParser
+from dynamo.docs.manual.sections import DESCRIPTION
 from dynamo.models.model import IGroup
-from dynamo.utils.values import ValueHandler
 
 _TITLE = 'Title'
 _CONTENT = ['some content', '', 'other_content']
@@ -42,27 +42,8 @@ def test_parser_has_NOT_section():
     assert not parser.has_section()
 
 
-def test_parser_with_number():
-    node = _section_node(DESCRIPTION.parse_value, valid=True, with_number=True)
-    parser = DocsParser(node)
-    assert isinstance(parser.number(), float)
-
-
-def test_parser_without_number():
-    node = _section_node(DESCRIPTION.parse_value, valid=True, with_number=False)
-    parser = DocsParser(node)
-    assert parser.number() is None
-
-
-def test_parser_title():
-    node = _section_node(DESCRIPTION.parse_value, valid=True)
-    parser = DocsParser(node)
-    assert parser.title() == _TITLE
-
-
 def test_parser_content():
     node = _section_node(DESCRIPTION.parse_value, valid=True)
     parser = DocsParser(node)
-    handler = ValueHandler()
-    assert len(parser.content(handler)) == len(_CONTENT)
-    assert parser.content(handler) == _CONTENT
+    assert len(parser.content()) == len(_CONTENT)
+    assert parser.content() == _CONTENT

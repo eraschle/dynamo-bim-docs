@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Protocol, TypeVar
 
-from pyflakes import scripts
-
 from dynamo.models.files import CustomFileNode, Package, PythonCustomFileNode, Script
 from dynamo.models.model import IDynamoFile, IFileModel
 from dynamo.models.nodes import CustomNode
@@ -31,11 +29,11 @@ class ISourceRepository(Protocol[TSource]):
         """Return True if the path can be read, otherwise False"""
         ...
 
-    def read(self, path: Path):
+    def read(self, path: Path) -> None:
         """Read and store the content of file path."""
         ...
 
-    def write(self, path: Path, content: TSource):
+    def write(self, path: Path, content: TSource) -> None:
         """Write the content to the file"""
         ...
 
@@ -75,16 +73,18 @@ class ISourceRepository(Protocol[TSource]):
 
 
 TFileModel = TypeVar('TFileModel', bound=IFileModel)
-TFileContent = TypeVar('TFileContent', covariant=False)
 
 
-class IFileBuilder(IBuilder[TFileModel, TFileContent], Protocol[TFileModel, TFileContent]):
+class IFileBuilder(IBuilder[TFileModel, TContent], Protocol[TFileModel, TContent]):
 
-    def change_name(self, node: TFileModel, repo: ISourceRepository[TFileContent], new_name: str) -> TFileModel:
+    def change_name(self, node: TFileModel, content: TContent, new_name: str) -> TFileModel:
         ...
 
-    def change_uuid(self, node: TFileModel, repo: ISourceRepository[TFileContent], new_uuid: str) -> TFileModel:
+    def change_uuid(self, node: TFileModel, content: TContent, new_uuid: str) -> TFileModel:
         ...
+
+
+TFileContent = TypeVar('TFileContent')
 
 
 class IDynamoFactory(Protocol[TFileContent]):

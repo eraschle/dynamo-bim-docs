@@ -74,6 +74,6 @@ class ValueHandler(IValueHandler):
         return lines
 
     def docs_or_manual_docs(self, values: Optional[List[str]]) -> List[str]:
-        if not checks.is_blank(values):
+        if values is None or checks.is_blank(values):
             return [self.default_docs]
         return values

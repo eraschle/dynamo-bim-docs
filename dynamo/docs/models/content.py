@@ -67,7 +67,7 @@ class ADocContent(IDocContent[TFile]):
     def _get_args(self, arg_name: str, default: Optional[TArg], **kwargs) -> TArg:
         value = kwargs.get(arg_name, default)
         if value is None or value == default:
-            raise ValueError(f'Argument "{arg_name}" is None or does not exists')
+            raise ValueError(f'Args "{arg_name}" is None or does not exists')
         return value
 
     def _get_lines(self, content_cb: Callable[..., List[str]], strip_cb: Optional[Callable[[List[str]], List[str]]] = None, **kwargs) -> List[str]:
@@ -92,7 +92,9 @@ class ADocContent(IDocContent[TFile]):
             lines.extend(self._get_lines(self._content, level=level, **kwargs))
 
         if self._has_child_content(**kwargs):
-            child_content = self._get_lines(self._child_content, level=level + 1, **kwargs)
+            child_content = self._get_lines(
+                self._child_content, level=level + 1, **kwargs
+            )
             if self._is_content(child_content):
                 lines.extend(self.exporter.empty_line())
                 lines.extend(child_content)
@@ -110,7 +112,9 @@ class ADocContent(IDocContent[TFile]):
     def _child_content(self, level: int, **kwargs) -> List[str]:
         lines = []
         for child in self.children:
-            child_content = self._get_lines(child.content, level=level, **kwargs)
+            child_content = self._get_lines(
+                child.content, level=level, **kwargs
+            )
             if not self._is_content(child_content):
                 continue
             lines.extend(self.exporter.empty_line())
@@ -129,7 +133,7 @@ class AHeadlineContent(ADocContent[TFile]):
 
     def _get_node(self, node_type: Type[TNode], **kwargs) -> TNode:
         arg_name = 'node'
-        node = self._get_args(arg_name, None, **kwargs)
+        node: TNode = self._get_args(arg_name, None, **kwargs)
         if not isinstance(node, node_type):
             raise ValueError(f'Except "{node_type}" but got {type(node)}')
         return node
@@ -143,7 +147,9 @@ class AHeadlineContent(ADocContent[TFile]):
         heading = self._get_lines(self._headline, level=level, **kwargs)
         self._set_existing_content(heading)
         lines.extend(heading)
-        content = self._get_lines(self._headline_content, level=level, **kwargs)
+        content = self._get_lines(
+            self._headline_content, level=level, **kwargs
+        )
         if self._is_content(content):
             lines.extend(self.exporter.empty_line())
             lines.extend(content)
@@ -188,7 +194,7 @@ class AHeadlineContent(ADocContent[TFile]):
 
 class TitleDocContent(ADocContent[TFile]):
 
-    def _content(self, **kwargs) -> List[str]:
+    def _content(self, level: int, **kwargs) -> List[str]:
         lines = []
         lines.extend(self.exporter.doc_head())
         lines.extend(self.exporter.empty_line())

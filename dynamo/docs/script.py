@@ -36,10 +36,10 @@ class ScriptProcessContent(ADocContent[Script]):
     def has_content(self, **_) -> bool:
         return self._get_other_path() is not None
 
-    def _content(self, **_) -> List[str]:
+    def _content(self, level: int, **_) -> List[str]:
         return []
 
-    def content(self, **_) -> List[str]:
+    def content(self, level: int, **_) -> List[str]:
         link_to_other = self._link_to_other()
         if link_to_other is None:
             raise ValueError(f'Link to other script file is None')
@@ -97,12 +97,13 @@ class ScriptInformationDocs(AFileDescriptionDocs[Script]):
         super().__init__(file_docs, children)
         self.process = process
 
-    def _common_informations(self, **kwargs) -> List[List[str]]:
-        lines = super()._common_informations()
+    def _common_information(self, **kwargs) -> List[List[str]]:
+        lines = super()._common_information()
         for child in self.process:
             if not child.has_content(**kwargs):
                 continue
-            lines.append(self._get_lines(child.content, self._lstrip_empty, **kwargs))
+            lines.append(self._get_lines(
+                child.content, self._lstrip_empty, **kwargs))
         return lines
 
     def _description(self, **_) -> List[str]:
@@ -121,7 +122,7 @@ class AInOutputSectionDocs(ASectionDoc[Script]):
     def _headline_content(self, **_) -> List[str]:
         return self.exporter.empty_line()
 
-    def _docs(self, **kwargs) -> List[str]:
+    def _docs(self, level: int, **kwargs) -> List[str]:
         node = self._get_node(INode, **kwargs)
         for child in self.children:
             if not isinstance(child, nodes.ANodeDocsContent):
@@ -137,10 +138,12 @@ class AInOutputSectionDocs(ASectionDoc[Script]):
             if isinstance(node, ICodeNode):
                 lines.extend(self.exporter.empty_line())
                 link = self.exporter.heading_link(node)
-                link = self.exporter.heading(link, level)
-                lines.extend(self.value_handler.as_list(link))
+                link_content = self.exporter.heading(link, level)
+                lines.extend(self.value_handler.as_list(link_content))
                 continue
-            content = self._get_lines(self._docs, level=level, node=node, **kwargs)
+            content = self._get_lines(
+                self._docs, level=level, node=node, **kwargs
+            )
             if self._is_content(content):
                 lines.extend(self.exporter.empty_line())
                 lines.extend(content)
@@ -174,7 +177,8 @@ def _scripts_content(file_docs: DocsNodeRepository[Script], with_code_block: boo
         ScriptInformationDocs(
             file_docs=file_docs,
             process=[
-                ScriptProcessPreviousDocs(file_docs, title='Vorheriges Skript'),
+                ScriptProcessPreviousDocs(
+                    file_docs, title='Vorheriges Skript'),
                 ScriptProcessNextDocs(file_docs, title='Nächstes Skript'),
             ],
             children=[

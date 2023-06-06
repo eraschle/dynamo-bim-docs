@@ -35,7 +35,7 @@ class FileHandler(ABC, IoHandler[Path, TContent]):
         return path.exists()
 
     def _open(self, path: Path, callback: Callable[[TextIO], Any], **kwargs) -> Any:
-        args = {"mode": "r", "encoding": self.encoding}
+        args: Dict[str, Any] = {"mode": "w", "encoding": self.encoding}
         args.update(kwargs)
         with open(self._as_str(path), **args) as file:
             return callback(file, **kwargs)
@@ -49,11 +49,11 @@ class FileHandler(ABC, IoHandler[Path, TContent]):
     def read(self, path: Path, **kwargs) -> TContent:
         return self._open(path, self._read, **kwargs)
 
-    def write(self, path: Path, content: TContent, **kwargs) -> None:
-        args = {"mode": "w", "encoding": self.encoding}
+    def write(self, path: Path, context: TContent, **kwargs) -> None:
+        args: Dict[str, Any] = {"mode": "w", "encoding": self.encoding}
         args.update(kwargs)
         with codecs.open(self._as_str(path), **args) as file:
-            self._write(file, content, **kwargs)
+            self._write(file, context, **kwargs)
 
     @abstractmethod
     def _read(self, file: TextIO, **kwargs) -> TContent:
@@ -69,7 +69,8 @@ class TextHandler(FileHandler[Iterable[str]]):
         return file.readlines()
 
     def _write(self, file: TextIO, content: Iterable[str], **kwargs) -> None:
-        content = [line if line.endswith("\n") else f"{line}\n" for line in content]
+        content = [line if line.endswith(
+            "\n") else f"{line}\n" for line in content]
         file.writelines(content)
 
 
@@ -94,7 +95,8 @@ class CsvHandler(FileHandler[List[List[Any]]]):
         value_dict = {}
         for index, header in enumerate(headers):
             value = (
-                values[index] if index < len(values) else kwargs.get("default", None)
+                values[index] if index < len(
+                    values) else kwargs.get("default", None)
             )
             value_dict[header] = value
         return value_dict
@@ -132,6 +134,6 @@ class JsonHandler(FileHandler[Dict[str, Any]]):
         return json.loads(file.read())
 
     def _write(self, file: TextIO, content: Dict[str, Any], **kwargs) -> None:
-        args = {"indent": 4, "ensure_ascii": False}
+        args: Dict[str, Any] = {"indent": 4, "ensure_ascii": False}
         args.update(**kwargs)
         json.dump(content, file, **args)

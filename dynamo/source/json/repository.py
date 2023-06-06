@@ -119,8 +119,9 @@ class JsonFileRepository(ISourceRepository[Dict[str, Any]]):
             return first
         raise ValueError(f'Excepted Dict but got {type(first)}')
 
-    def dynamo_info(self) -> List[Dict[str, Any]]:
-        return self._get_content(['View', 'Dynamo'])
+    def dynamo_info(self) -> Dict[str, Any]:
+        info = self._get_content(['View', 'Dynamo'])
+        return {} if len(info) < 1 else info[0]
 
     def package_info(self) -> Dict[str, Any]:
         return self._common_info([])

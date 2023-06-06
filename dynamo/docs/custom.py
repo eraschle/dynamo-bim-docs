@@ -42,11 +42,15 @@ def dependencies_docs(file_docs: DocsNodeRepository[TDynamo]) -> IDocContent[TDy
         children=[
             PackageDependenciesDocs(
                 file=file_docs.file, headline='Packages',
-                children=[PackageDependencyDocs(file_docs=file_docs, children=[])],
+                children=[
+                    PackageDependencyDocs(file_docs=file_docs, children=[])
+                ],
             ),
             ExternalDependenciesDocs(
                 file=file_docs.file, headline='External',
-                children=[ExternalDependencyDocs(file_docs=file_docs, children=[])],
+                children=[
+                    ExternalDependencyDocs(file_docs=file_docs, children=[])
+                ],
             )
         ]
     )
@@ -54,9 +58,10 @@ def dependencies_docs(file_docs: DocsNodeRepository[TDynamo]) -> IDocContent[TDy
 
 class CustomNodeInformationDocs(AFileDescriptionDocs[CustomFileNode]):
 
-    def _common_informations(self) -> List[List[str]]:
-        lines = super()._common_informations()
-        lines.append(['Kategorie', self.value_handler.as_str(self.model.category)])
+    def _common_information(self) -> List[List[str]]:
+        lines = super()._common_information()
+        lines.append(
+            ['Kategorie', self.value_handler.as_str(self.model.category)])
         return lines
 
     def _description(self, **_) -> List[str]:

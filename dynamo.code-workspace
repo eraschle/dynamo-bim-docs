@@ -4,5 +4,16 @@
 			"path": "."
 		}
 	],
-	"settings": {},
+	"settings": {
+		"python.analysis.autoFormatStrings": true,
+		"python.analysis.autoImportCompletions": true,
+		"python.analysis.diagnosticMode": "workspace",
+		"python.analysis.completeFunctionParens": true,
+		"python.analysis.typeCheckingMode": "basic",
+		"python.linting.mypyEnabled": true,
+		// "python.linting.pylintEnabled": true,
+		"python.terminal.activateEnvInCurrentTerminal": true,
+		"editor.formatOnSave": true,
+		"notebook.formatOnSave.enabled": false
+	},
 }

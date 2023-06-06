@@ -47,7 +47,7 @@ class IGroup(IAnnotation, IModelWithNodes[IModelWithId],  Protocol):
 
 
 class IDependency(IBaseModel, IModelWithNodes[TNode],  Protocol[TNode]):
-    nodes: List[IBaseModel]
+    nodes: List[TNode]
 
 
 class IPackage(IBaseModel, Protocol):
@@ -79,7 +79,7 @@ class IInfoModel:
 
 
 TInfo = TypeVar('TInfo', bound=IInfoModel)
-TFileNode = TypeVar('TFileNode', IModelWithId, ICustomNode)
+TFileNode = TypeVar('TFileNode', INode, ICustomNode)
 
 
 class IFileModel(IBaseModel, Protocol[TFileNode, TInfo]):

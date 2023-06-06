@@ -5,10 +5,10 @@ from typing import Iterable, List, Optional, Type
 
 from dynamo.models.nodes import CustomNode, InputOutputNode, PackageDependency
 
-from . import model
-from .model import (IAnnotation, IBaseModel, ICustomNode, IDependency,
-                    IDynamoFile, IFileModel, IGroup, IInfoModel, IModelWithId,
-                    INode, IPackage, TDependency, TNode)
+from dynamo.models import model
+from dynamo.models.model import (IAnnotation, IBaseModel, ICustomNode, IDependency,
+                                 IDynamoFile, IFileModel, IGroup, IInfoModel, IModelWithId,
+                                 INode, IPackage, TDependency, TNode)
 
 log = logging.getLogger(__name__)
 
@@ -84,7 +84,9 @@ class ADynamoFileNode(AFileBaseModel, IDynamoFile[DynamoInfo]):
         return len(self.get_dependencies(node_type)) > 0
 
     def get_dependencies(self, node_type: Type[TDependency]) -> List[TDependency]:
-        nodes = [node for node in self.dependencies if isinstance(node, node_type)]
+        nodes = [
+            node for node in self.dependencies if isinstance(node, node_type)
+        ]
         return sorted(nodes, key=lambda dep: dep.name)
 
     def has_nodes(self, node_type: Type[TNode]) -> bool:
@@ -117,19 +119,21 @@ class Script(ADynamoFileNode):
         return nodes
 
 
-def default_package_info() -> 'PackageInfo':
+def _package_info() -> 'PackageInfo':
     return PackageInfo(version='', license='', group='', keywords='', dependencies='',
                        contents='', engine_version='', site_url='', repository_url='')
 
 
-def default_package() -> IPackage:
-    return Package(name='', path=Path(), description='', info=default_package_info())
+def _package() -> IPackage:
+    return Package(name='', path=Path(), description='', info=_package_info())
 
 
 @dataclass
 class CustomFileNode(ADynamoFileNode, ICustomNode):
     category: str = field(repr=True, compare=False)
-    package: IPackage = field(default_factory=default_package, compare=False, repr=True)
+    package: IPackage = field(
+        default_factory=_package, compare=False, repr=True
+    )
 
     @property
     def full_name(self) -> str:
@@ -146,13 +150,15 @@ class PackageInfo(IInfoModel):
     version: str = field(compare=True, repr=True)
     license: str = field(compare=False, repr=False)  # ""
     group: str = field(compare=False, repr=False)  # "RSRG"
-    keywords: str = field(compare=False, repr=False)  # ["rsrg", "sersa", "rail"]
+    # ["rsrg", "sersa", "rail"]
+    keywords: str = field(compare=False, repr=False)
     dependencies: str = field(compare=False, repr=False)  # []
     contents: str = field(compare=False, repr=False)  # ""
     engine_version: str = field(compare=False, repr=False)  # "1.3.2.2480"
     # engine: str = field(compare=False, repr=False)  # "dynamo"
     # engine_metadata: str = field(compare=False, repr=False)  # ""
-    site_url: str = field(compare=False, repr=False)  # "www.rhomberg-sersa.com/de"
+    # "www.rhomberg-sersa.com/de"
+    site_url: str = field(compare=False, repr=False)
     repository_url: str = field(compare=False, repr=False)  # ""
     # contains_binaries: str = field(compare=False, repr=False)  # false
     # node_libraries: str = field(compare=False, repr=False)  # [
